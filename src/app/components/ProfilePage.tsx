@@ -48,8 +48,8 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
 
   const filteredUsers = users.filter(
     (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.username.toLowerCase().includes(search.toLowerCase())
+      (u.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (u.username || "").toLowerCase().includes(search.toLowerCase())
   );
 
   const RoleBadge = ({ role }: { role?: "admin" | "creator" | "user" }) => {

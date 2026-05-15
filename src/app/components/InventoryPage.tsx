@@ -207,6 +207,3 @@ export function InventoryPage({ inventory }: InventoryPageProps) {
     </div>
   );
 }
-    </div>
-  );
-}

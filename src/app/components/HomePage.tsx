@@ -341,25 +341,3 @@ export function HomePage({ onAddItem, inventory }: HomePageProps) {
     </div>
   );
 }
-ed-xl"
-                style={glass(isDark, 0.05)}
-              >
-                {item.emoji.startsWith("http") ? (
-                  <img src={item.emoji} alt={item.name} className="w-8 h-8 object-cover rounded-lg" />
-                ) : (
-                  <span className="text-2xl">{item.emoji}</span>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm truncate" style={{ color: c.primary }}>{item.name}</div>
-                  <div className="text-xs" style={{ color: c.muted }}>{rarityLabel[item.rarity]}</div>
-                </div>
-                <ChevronRight size={14} style={{ color: c.muted }} />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
-}

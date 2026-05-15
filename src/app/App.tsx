@@ -19,10 +19,15 @@ const TABS = [
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [isDark, setIsDark] = useState(true);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const { tgUser } = useApp();
+  const { tgUser, users, addKibikToUser } = useApp();
 
-  const addItem = (item: InventoryItem) => setInventory((prev) => [...prev, item]);
+  const currentUserId = tgUser ? tgUser.id.toString() : "12345";
+  const currentUser = users.find((u) => u.id === currentUserId);
+  const inventory = currentUser?.inventory || [];
+
+  const addItem = (item: InventoryItem) => {
+    addKibikToUser(currentUserId, item);
+  };
 
   const bg = isDark ? "#080810" : "#ededf5";
   const navBg = isDark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.72)";
@@ -39,7 +44,7 @@ function AppContent() {
         className="size-full relative overflow-hidden flex flex-col"
         style={{ background: bg, minHeight: "100dvh", maxWidth: 430, margin: "0 auto" }}
       >
-        {/* White/dark light glow from bottom */}
+        {/* White/dark light glow from bottom */}netlify
         <div
           className="pointer-events-none absolute inset-0 z-0"
           style={{
