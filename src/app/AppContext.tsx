@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { InventoryItem } from "./components/HomePage";
-import { KIBIK_CODES as MOCK_KIBIK_CODES, MOCK_USERS, type MockUser } from "./data/mockData";
+import { MOCK_USERS, type MockUser } from "./data/mockData";
 import { supabase } from "./supabaseClient";
 
 export interface TelegramUser {
@@ -13,6 +13,15 @@ export interface TelegramUser {
 
 export type Role = "admin" | "creator" | "user";
 
+export interface Trade {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  offer_item: InventoryItem;
+  request_item: InventoryItem;
+  status: "pending" | "accepted" | "declined";
+}
+
 export interface AppState {
   tgUser: TelegramUser | null;
   role: Role;
@@ -24,6 +33,11 @@ export interface AppState {
   updateUserRole: (userId: string, newRole: Role) => void;
   banUser: (userId: string, until: Date, reason: string) => void;
   addKibikToUser: (userId: string, item: InventoryItem) => void;
+  appError: string | null;
+  trades: Trade[];
+  createTrade: (receiverId: string, offer: InventoryItem, request: InventoryItem) => void;
+  acceptTrade: (tradeId: string) => void;
+  declineTrade: (tradeId: string) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -32,7 +46,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [tgUser, setTgUser] = useState<TelegramUser | null>(null);
   const [role, setRole] = useState<Role>("user");
   const [users, setUsers] = useState<MockUser[]>(MOCK_USERS);
-  const [globalKibiks, setGlobalKibiks] = useState(MOCK_KIBIK_CODES);
+  const [globalKibiks, setGlobalKibiks] = useState<Record<string, Omit<InventoryItem, "id" | "addedAt">>>({});
+  const [appError, setAppError] = useState<string | null>(null);
+  const [trades, setTrades] = useState<Trade[]>([]);
 
   useEffect(() => {
     const initApp = async () => {
@@ -99,14 +115,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!meInDb) {
           const { error: insertError } = await supabase.from("users").insert(currentUser);
           if (insertError) {
+            setAppError(`Ошибка сохранения: ${insertError.message}`);
             console.error("Ошибка при сохранении в Supabase:", insertError);
           } else {
             merged = [currentUser, ...merged];
           }
         }
 
+        // 4. Скачиваем доступные глобальные кибики (промокоды)
+        const { data: dbKibiks, error: kibiksError } = await supabase.from("kibiks").select("*");
+        if (kibiksError) throw kibiksError;
+        if (dbKibiks) {
+          const kibiksMap: Record<string, any> = {};
+          dbKibiks.forEach((k: any) => (kibiksMap[k.code] = k));
+          setGlobalKibiks(kibiksMap);
+        }
+
+        // 5. Скачиваем трейды (входящие и исходящие)
+        const { data: dbTrades } = await supabase.from("trades").select("*").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+        if (dbTrades) setTrades(dbTrades);
+
         setUsers(merged);
       } catch (err) {
+        setAppError(`Ошибка БД: ${err.message || String(err)}`);
         console.error("Критическая ошибка Supabase:", err);
       }
     };
@@ -116,6 +147,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addGlobalKibik = (code: string, kibik: Omit<InventoryItem, "id" | "addedAt">) => {
     setGlobalKibiks((prev) => ({ ...prev, [code.toUpperCase()]: kibik }));
+    // Отправляем новый кибик в базу данных
+    supabase.from("kibiks").insert({
+      code: code.toUpperCase(),
+      name: kibik.name,
+      rarity: kibik.rarity,
+      emoji: kibik.emoji
+    }).then(({ error }) => { if (error) console.error("Ошибка сохранения кибика:", error) });
   };
 
   const removeGlobalKibik = (code: string) => {
@@ -124,6 +162,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       delete newState[code.toUpperCase()];
       return newState;
     });
+    // Удаляем кибик из базы (чтобы он был одноразовым для всех)
+    supabase.from("kibiks").delete().eq("code", code.toUpperCase()).then();
   };
 
   const updateUserRole = (userId: string, newRole: Role) => {
@@ -168,8 +208,103 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const createTrade = async (receiverId: string, offer: InventoryItem, request: InventoryItem) => {
+    const currentUserId = tgUser ? tgUser.id.toString() : "12345";
+    const newTrade = {
+      sender_id: currentUserId,
+      receiver_id: receiverId,
+      offer_item: offer,
+      request_item: request,
+      status: "pending"
+    };
+    const { data, error } = await supabase.from("trades").insert(newTrade).select().single();
+    if (error) console.error("Ошибка трейда:", error);
+    if (data) setTrades(prev => [data, ...prev]);
+  };
+
+  const acceptTrade = async (tradeId: string) => {
+    const trade = trades.find(t => t.id === tradeId);
+    if (!trade) return;
+    const senderId = trade.sender_id;
+    const receiverId = trade.receiver_id;
+    const sender = users.find(u => u.id === senderId);
+    const receiver = users.find(u => u.id === receiverId);
+    if (!sender || !receiver) return;
+
+    const senderInv = sender.inventory?.filter(i => i.id !== trade.offer_item.id) || [];
+    senderInv.push({ ...trade.request_item, addedAt: new Date() });
+    const receiverInv = receiver.inventory?.filter(i => i.id !== trade.request_item.id) || [];
+    receiverInv.push({ ...trade.offer_item, addedAt: new Date() });
+
+    const sKibiks = senderInv.length;
+    const rKibiks = receiverInv.length;
+    await supabase.from("users").update({ inventory: senderInv, kibiks: sKibiks, level: Math.max(1, Math.floor(sKibiks / 3) + 1) }).eq("id", senderId);
+    await supabase.from("users").update({ inventory: receiverInv, kibiks: rKibiks, level: Math.max(1, Math.floor(rKibiks / 3) + 1) }).eq("id", receiverId);
+    await supabase.from("trades").update({ status: "accepted" }).eq("id", tradeId);
+
+    setTrades(prev => prev.map(t => t.id === tradeId ? { ...t, status: "accepted" } : t));
+    setUsers(prev => prev.map(u => {
+      if (u.id === senderId) return { ...u, inventory: senderInv, kibiks: sKibiks };
+      if (u.id === receiverId) return { ...u, inventory: receiverInv, kibiks: rKibiks };
+      return u;
+    }));
+  };
+
+  const declineTrade = async (tradeId: string) => {
+    await supabase.from("trades").update({ status: "declined" }).eq("id", tradeId);
+    setTrades(prev => prev.map(t => t.id === tradeId ? { ...t, status: "declined" } : t));
+  };
+
+  // Эффект для прослушивания базы данных в реальном времени
+  useEffect(() => {
+    const channel = supabase.channel('db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
+        setUsers((prev) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const u = payload.new as any;
+            if (u.bannedUntil) u.bannedUntil = new Date(u.bannedUntil);
+            if (u.inventory) {
+              u.inventory = u.inventory.map((item: any) => ({ ...item, addedAt: new Date(item.addedAt) }));
+            }
+            const exists = prev.find((p) => p.id === u.id);
+            if (exists) return prev.map((p) => (p.id === u.id ? { ...p, ...u } : p));
+            return [u, ...prev];
+          }
+          if (payload.eventType === 'DELETE') return prev.filter((p) => p.id !== payload.old.id);
+          return prev;
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kibiks' }, (payload) => {
+        setGlobalKibiks((prev) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            return { ...prev, [payload.new.code]: payload.new };
+          }
+          if (payload.eventType === 'DELETE') {
+            const next = { ...prev };
+            delete next[payload.old.code];
+            return next;
+          }
+          return prev;
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trades' }, (payload) => {
+        setTrades((prev) => {
+          if (payload.eventType === 'INSERT') {
+            if (!prev.find((t) => t.id === payload.new.id)) return [payload.new as any, ...prev];
+            return prev;
+          }
+          if (payload.eventType === 'UPDATE') return prev.map((t) => (t.id === payload.new.id ? (payload.new as any) : t));
+          if (payload.eventType === 'DELETE') return prev.filter((t) => t.id !== payload.old.id);
+          return prev;
+        });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   return (
-    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, addKibikToUser }}>
+    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, addKibikToUser, appError, trades, createTrade, acceptTrade, declineTrade }}>
       {children}
     </AppContext.Provider>
   );

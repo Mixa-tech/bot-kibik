@@ -19,7 +19,7 @@ const TABS = [
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [isDark, setIsDark] = useState(true);
-  const { tgUser, users, addKibikToUser } = useApp();
+  const { tgUser, users, addKibikToUser, appError } = useApp();
 
   const currentUserId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find((u) => u.id === currentUserId);
@@ -63,6 +63,13 @@ function AppContent() {
               : "radial-gradient(ellipse 70% 100% at 50% 0%, rgba(0,0,0,0.015) 0%, transparent 100%)",
           }}
         />
+
+        {/* Баннер с ошибкой БД (если есть) */}
+        {appError && (
+          <div className="absolute top-0 left-0 right-0 z-50 p-3 bg-red-500/90 backdrop-blur-md text-white text-xs text-center font-medium shadow-lg border-b border-red-400">
+            {appError}
+          </div>
+        )}
 
         {/* Theme toggle */}
         <div className="absolute top-4 right-4 z-20">

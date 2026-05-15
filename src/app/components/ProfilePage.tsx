@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, Users, Package2, Crown, Star, Zap, ChevronRight, X, ShieldAlert, Ban } from "lucide-react";
+import { Search, Users, Package2, Crown, Star, Zap, ChevronRight, X, ShieldAlert, Ban, ArrowRightLeft } from "lucide-react";
 import { useTheme, glass, tc } from "./ThemeContext";
 import type { InventoryItem } from "./HomePage";
 import { useApp } from "../AppContext";
@@ -21,7 +21,14 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
   const [banDays, setBanDays] = useState("1");
   const [banReason, setBanReason] = useState("");
 
-  const { role: myRole, users, updateUserRole, banUser } = useApp();
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [tradeOffer, setTradeOffer] = useState<InventoryItem | null>(null);
+  const [tradeRequest, setTradeRequest] = useState<InventoryItem | null>(null);
+
+  const { role: myRole, users, updateUserRole, banUser, tgUser, trades, createTrade, acceptTrade, declineTrade } = useApp();
+  const myId = tgUser ? tgUser.id.toString() : "12345";
+  const pendingIncoming = trades.filter((t) => t.receiver_id === myId && t.status === "pending");
+  const pendingOutgoing = trades.filter((t) => t.sender_id === myId && t.status === "pending");
 
   const myStats = {
     legendary: inventory.filter((i) => i.rarity === "legendary").length,
@@ -146,6 +153,51 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
           ))}
         </div>
       </motion.div>
+
+      {/* Trades Section */}
+      {(pendingIncoming.length > 0 || pendingOutgoing.length > 0) && (
+        <div className="flex flex-col gap-3 mt-2 mb-2">
+          {pendingIncoming.map(trade => {
+            const sender = users.find(u => u.id === trade.sender_id);
+            return (
+              <div key={trade.id} className="p-4 rounded-2xl flex flex-col gap-3 border border-blue-500/30" style={{ background: isDark ? "rgba(59,130,246,0.1)" : "rgba(59,130,246,0.05)" }}>
+                <div className="flex justify-between items-center text-sm">
+                  <span style={{ color: c.primary }} className="font-medium">Входящий трейд от {sender?.name || "Неизвестного"}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-xl" style={glass(isDark, 0.05)}>
+                  <div className="flex flex-col items-center flex-1">
+                    <span className="text-2xl mb-1">{trade.offer_item.emoji}</span>
+                    <span className="text-[10px] text-center w-full truncate" style={{ color: c.primary }}>{trade.offer_item.name}</span>
+                    <span className="text-[9px]" style={{ color: c.muted }}>Предлагает</span>
+                  </div>
+                  <ArrowRightLeft size={16} style={{ color: c.muted }} className="shrink-0 mx-2" />
+                  <div className="flex flex-col items-center flex-1">
+                    <span className="text-2xl mb-1">{trade.request_item.emoji}</span>
+                    <span className="text-[10px] text-center w-full truncate" style={{ color: c.primary }}>{trade.request_item.name}</span>
+                    <span className="text-[9px]" style={{ color: c.muted }}>Просит твой</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => acceptTrade(trade.id)} className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-semibold transition-colors">Принять</button>
+                  <button onClick={() => declineTrade(trade.id)} className="flex-1 py-2.5 bg-red-500/20 text-red-400 rounded-xl text-xs font-semibold hover:bg-red-500/30 transition-colors">Отклонить</button>
+                </div>
+              </div>
+            )
+          })}
+          {pendingOutgoing.map(trade => {
+            const receiver = users.find(u => u.id === trade.receiver_id);
+            return (
+              <div key={trade.id} className="p-4 rounded-2xl flex flex-col gap-3 border border-transparent" style={glass(isDark, 0.05)}>
+                <div className="flex justify-between items-center text-sm">
+                  <span style={{ color: c.muted }}>Трейд для {receiver?.name || "Неизвестного"}</span>
+                  <span className="text-[10px] text-yellow-400">Ожидает</span>
+                </div>
+                <button onClick={() => declineTrade(trade.id)} className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-xs font-semibold transition-colors">Отменить предложение</button>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Search */}
       <div>
@@ -406,6 +458,62 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Trade Creation Modal Overlay */}
+      <AnimatePresence>
+        {showTradeModal && selectedUser && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed inset-0 z-[70] flex flex-col p-4"
+            style={{ background: isDark ? "#080810" : "#ededf5" }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold" style={{ color: c.primary }}>Трейд с {selectedUser.name}</h2>
+              <button onClick={() => setShowTradeModal(false)} className="w-8 h-8 rounded-full flex items-center justify-center" style={glass(isDark, 0.1)}>
+                <X size={16} style={{ color: c.muted }} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto flex flex-col gap-6" style={{ paddingBottom: 80 }}>
+              <div className="flex flex-col gap-3">
+                <h3 className="text-sm font-medium px-1" style={{ color: c.primary }}>Что ты отдаешь:</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {inventory.map(item => (
+                    <button key={item.id} onClick={() => setTradeOffer(item)} className="flex flex-col items-center p-3 rounded-xl border transition-all" style={{ ...glass(isDark, 0.05), borderColor: tradeOffer?.id === item.id ? "#3b82f6" : "transparent", background: tradeOffer?.id === item.id ? "rgba(59, 130, 246, 0.15)" : undefined }}>
+                      <span className="text-3xl mb-2">{item.emoji}</span>
+                      <span className="text-[10px] text-center leading-tight truncate w-full" style={{ color: c.primary }}>{item.name}</span>
+                    </button>
+                  ))}
+                  {inventory.length === 0 && <span className="text-xs px-1" style={{ color: c.muted }}>У тебя нет кибиков</span>}
+                </div>
+              </div>
+
+              <div className="flex justify-center"><div className="p-3 rounded-full" style={glass(isDark, 0.1)}><ArrowRightLeft size={20} style={{ color: c.secondary }} /></div></div>
+
+              <div className="flex flex-col gap-3">
+                <h3 className="text-sm font-medium px-1" style={{ color: c.primary }}>Что хочешь получить:</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {selectedUser.inventory?.map(item => (
+                    <button key={item.id} onClick={() => setTradeRequest(item)} className="flex flex-col items-center p-3 rounded-xl border transition-all" style={{ ...glass(isDark, 0.05), borderColor: tradeRequest?.id === item.id ? "#3b82f6" : "transparent", background: tradeRequest?.id === item.id ? "rgba(59, 130, 246, 0.15)" : undefined }}>
+                      <span className="text-3xl mb-2">{item.emoji}</span>
+                      <span className="text-[10px] text-center leading-tight truncate w-full" style={{ color: c.primary }}>{item.name}</span>
+                    </button>
+                  ))}
+                  {(!selectedUser.inventory || selectedUser.inventory.length === 0) && <span className="text-xs px-1" style={{ color: c.muted }}>У пользователя нет кибиков</span>}
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute bottom-4 left-4 right-4">
+              <button disabled={!tradeOffer || !tradeRequest} onClick={() => { if(tradeOffer && tradeRequest) { createTrade(selectedUser.id, tradeOffer, tradeRequest); setShowTradeModal(false); setSelectedUser(null); } }} className="w-full py-4 rounded-xl font-semibold text-white disabled:opacity-50 transition-opacity flex justify-center items-center gap-2" style={{ background: "#3b82f6", boxShadow: "0 4px 20px rgba(59, 130, 246, 0.3)" }}>
+                Отправить предложение
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
