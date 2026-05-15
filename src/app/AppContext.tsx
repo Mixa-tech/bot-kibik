@@ -122,20 +122,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
+        // Сохраняем пользователей сразу, чтобы список загрузился даже если дальше будет ошибка
+        setUsers(merged);
+
         // 4. Скачиваем доступные глобальные кибики (промокоды)
         const { data: dbKibiks, error: kibiksError } = await supabase.from("kibiks").select("*");
-        if (kibiksError) throw kibiksError;
-        if (dbKibiks) {
+        if (kibiksError) {
+          setAppError(`Ошибка таблицы kibiks: ${kibiksError.message}`);
+        } else if (dbKibiks) {
           const kibiksMap: Record<string, any> = {};
           dbKibiks.forEach((k: any) => (kibiksMap[k.code] = k));
           setGlobalKibiks(kibiksMap);
         }
 
         // 5. Скачиваем трейды (входящие и исходящие)
-        const { data: dbTrades } = await supabase.from("trades").select("*").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
-        if (dbTrades) setTrades(dbTrades);
-
-        setUsers(merged);
+        const { data: dbTrades, error: tradesError } = await supabase.from("trades").select("*").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+        if (tradesError) {
+          setAppError((prev) => prev ? `${prev} | Ошибка trades: ${tradesError.message}` : `Ошибка trades: ${tradesError.message}`);
+        } else if (dbTrades) {
+          setTrades(dbTrades);
+        }
       } catch (err) {
         setAppError(`Ошибка БД: ${err.message || String(err)}`);
         console.error("Критическая ошибка Supabase:", err);
@@ -153,7 +159,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       name: kibik.name,
       rarity: kibik.rarity,
       emoji: kibik.emoji
-    }).then(({ error }) => { if (error) console.error("Ошибка сохранения кибика:", error) });
+    }).then(({ error }) => { 
+      if (error) {
+        console.error("Ошибка сохранения кибика:", error);
+        setAppError(`Ошибка создания кода: ${error.message}`);
+      }
+    });
   };
 
   const removeGlobalKibik = (code: string) => {
