@@ -165,7 +165,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.error("Ошибка сохранения кибика:", error);
         setAppError(`Ошибка создания кода: ${error.message}`);
       }
-    });
+    }).catch(err => setAppError(`Сбой сети: ${err.message || String(err)}`));
   };
 
   const removeGlobalKibik = (code: string) => {
@@ -175,7 +175,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return newState;
     });
     // Удаляем кибик из базы (чтобы он был одноразовым для всех)
-    supabase.from("kibiks").delete().eq("code", code.toUpperCase()).then();
+    supabase.from("kibiks").delete().eq("code", code.toUpperCase())
+      .then(({ error }) => { if (error) console.error(error); })
+      .catch(console.error);
   };
 
   const updateUserRole = (userId: string, newRole: Role) => {
@@ -218,7 +220,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           console.error("Ошибка обновления инвентаря:", error);
           setAppError(`Ошибка инвентаря: ${error.message}`);
         }
-      });
+      }).catch(err => setAppError(`Сбой сети инвентаря: ${err.message || String(err)}`));
   };
 
   const createTrade = async (receiverId: string, offer: InventoryItem, request: InventoryItem) => {

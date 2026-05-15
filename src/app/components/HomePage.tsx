@@ -49,7 +49,24 @@ export function HomePage({ onAddItem, inventory }: HomePageProps) {
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setNewEmoji(event.target?.result as string);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_SIZE = 256;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+          } else {
+            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+          setNewEmoji(canvas.toDataURL("image/jpeg", 0.7)); // Сжимаем качество до 70%
+        };
+        img.src = event.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -205,6 +222,7 @@ export function HomePage({ onAddItem, inventory }: HomePageProps) {
             <PlusCircle size={16} /> Добавить в систему
           </button>
           {adminStatus === "success" && <div className="text-green-400 text-xs text-center mt-1">Успешно добавлено!</div>}
+          {adminStatus === "error" && <div className="text-red-400 text-xs text-center mt-1">Заполни все поля (код и название)!</div>}
         </motion.div>
       )}
 
