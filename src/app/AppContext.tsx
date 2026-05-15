@@ -110,19 +110,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return u;
         });
 
-        // 3. Добавляем в базу, если тебя там нет
+        // 3. Добавляем пользователя локально СРАЗУ, чтобы избежать бага пустого инвентаря
         const meInDb = merged.find((u) => u.id === currentUser.id);
         if (!meInDb) {
+          merged = [currentUser, ...merged];
+          
+          // Параллельно отправляем в базу
           const { error: insertError } = await supabase.from("users").insert(currentUser);
           if (insertError) {
             setAppError(`Ошибка сохранения: ${insertError.message}`);
             console.error("Ошибка при сохранении в Supabase:", insertError);
-          } else {
-            merged = [currentUser, ...merged];
           }
         }
 
-        // Сохраняем пользователей сразу, чтобы список загрузился даже если дальше будет ошибка
+        // Гарантированно обновляем стейт
         setUsers(merged);
 
         // 4. Скачиваем доступные глобальные кибики (промокоды)
@@ -198,25 +199,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addKibikToUser = (userId: string, item: InventoryItem) => {
-    setUsers((prev) => {
-      const newUsers = prev.map((u) => {
-        if (u.id === userId) {
-          const newInventory = [...(u.inventory || []), item];
-          const newKibiks = newInventory.length;
-          const newLevel = Math.max(1, Math.floor(newKibiks / 3) + 1);
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    const newInventory = [...(user.inventory || []), item];
+    const newKibiks = newInventory.length;
+    const newLevel = Math.max(1, Math.floor(newKibiks / 3) + 1);
 
-          // Отправляем обновление в базу данных Supabase
-          supabase.from("users").update({ inventory: newInventory, kibiks: newKibiks, level: newLevel }).eq("id", userId)
-            .then(({ error }) => {
-              if (error) console.error("Ошибка обновления инвентаря:", error);
-            });
+    // 1. Быстро обновляем интерфейс
+    setUsers((prev) => prev.map((u) => 
+      u.id === userId ? { ...u, inventory: newInventory, kibiks: newKibiks, level: newLevel } : u
+    ));
 
-          return { ...u, inventory: newInventory, kibiks: newKibiks, level: newLevel };
+    // 2. Отправляем в БД (исправлен баг "side-effect inside setState")
+    supabase.from("users").update({ inventory: newInventory, kibiks: newKibiks, level: newLevel }).eq("id", userId)
+      .then(({ error }) => {
+        if (error) {
+          console.error("Ошибка обновления инвентаря:", error);
+          setAppError(`Ошибка инвентаря: ${error.message}`);
         }
-        return u;
       });
-      return newUsers;
-    });
   };
 
   const createTrade = async (receiverId: string, offer: InventoryItem, request: InventoryItem) => {
