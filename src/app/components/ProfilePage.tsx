@@ -154,6 +154,26 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
         </div>
       </motion.div>
 
+                {/* User Inventory Preview */}
+                <div className="w-full mt-3 flex flex-col gap-2">
+                  <p className="text-[10px] uppercase tracking-widest text-left px-1" style={{ color: c.muted }}>Инвентарь ({selectedUser.inventory?.length || 0})</p>
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
+                    {selectedUser.inventory?.map(item => (
+                      <div key={item.id} className="shrink-0 flex flex-col items-center justify-center p-2 rounded-xl border" style={{ ...glass(isDark, 0.05), width: 68, height: 72 }}>
+                        {/^(https?|data|blob):/.test(item.emoji) ? (
+                          <img src={item.emoji} alt={item.name} className="w-6 h-6 object-cover rounded mb-1" />
+                        ) : (
+                          <span className="text-2xl mb-1 leading-none">{item.emoji}</span>
+                        )}
+                        <span className="text-[9px] text-center w-full truncate leading-tight" style={{ color: c.primary }}>{item.name}</span>
+                      </div>
+                    ))}
+                    {(!selectedUser.inventory || selectedUser.inventory.length === 0) && (
+                      <div className="text-xs px-1" style={{ color: c.muted }}>Пусто</div>
+                    )}
+                  </div>
+                </div>
+                
       {/* Trades Section */}
       {(pendingIncoming.length > 0 || pendingOutgoing.length > 0) && (
         <div className="flex flex-col gap-3 mt-2 mb-2">
@@ -303,7 +323,7 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
               initial={{ opacity: 0, y: 80 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 80 }}
-              className="fixed bottom-20 left-4 right-4 z-50 rounded-3xl p-6"
+              className="fixed bottom-20 left-4 right-4 z-50 rounded-3xl p-6 overflow-y-auto max-h-[75vh] scrollbar-none"
               style={{
                 background: isDark ? "rgba(12,12,20,0.96)" : "rgba(248,248,255,0.96)",
                 border: `1px solid ${isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.1)"}`,

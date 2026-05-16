@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
-import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle } from "lucide-react";
+import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X } from "lucide-react";
 import { useApp } from "../AppContext";
 
 export function AdminDashboard() {
-  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser } = useApp();
+  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser } = useApp();
   const [pin, setPin] = useState("");
   const [auth, setAuth] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const ADMIN_PIN = "7777"; // СЕКРЕТНЫЙ ПИНКОД (Можешь поменять на любой свой)
 
@@ -202,14 +203,17 @@ export function AdminDashboard() {
                         </div>
                       </div>
                     </div>
-                    {isBanned ? (
-                      <button onClick={() => unbanUser(u.id)} className="bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Разбан</button>
-                    ) : (
-                      <button onClick={() => {
-                        const d = new Date(); d.setDate(d.getDate() + 30);
-                        banUser(u.id, d, "Бан администратором из панели");
-                      }} className="bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Бан</button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setSelectedUser(u)} className="bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Инвентарь</button>
+                      {isBanned ? (
+                        <button onClick={() => unbanUser(u.id)} className="bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Разбан</button>
+                      ) : (
+                        <button onClick={() => {
+                          const d = new Date(); d.setDate(d.getDate() + 30);
+                          banUser(u.id, d, "Бан администратором из панели");
+                        }} className="bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Бан</button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -217,6 +221,45 @@ export function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* User Inventory Modal */}
+      {selectedUser && (() => {
+        const u = users.find(user => user.id === selectedUser.id) || selectedUser;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="bg-[#111] border border-[#222] rounded-3xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center text-xl">{u.avatar}</div>
+                  <div>
+                    <h2 className="text-xl font-bold">Инвентарь: {u.name}</h2>
+                    <p className="text-sm text-neutral-400">{u.inventory?.length || 0} кибиков</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedUser(null)} className="p-2 bg-[#222] hover:bg-[#333] rounded-full transition-colors"><X size={20} /></button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 scrollbar-thin">
+                {(!u.inventory || u.inventory.length === 0) && <p className="text-neutral-500 col-span-full text-center py-10">Инвентарь пуст</p>}
+                {u.inventory?.map((item: any) => (
+                  <div key={item.id} className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 flex flex-col items-center gap-2 relative group hover:border-[#444] transition-colors">
+                    {/^(https?|data|blob):/.test(item.emoji) ? (
+                      <img src={item.emoji} alt={item.name} className="w-10 h-10 object-cover rounded-lg mb-1" />
+                    ) : (
+                      <div className="text-4xl mb-1">{item.emoji}</div>
+                    )}
+                    <div className="text-xs font-bold text-center w-full truncate">{item.name}</div>
+                    <div className="text-[10px] text-neutral-500">{item.rarity}</div>
+                    <button onClick={() => removeKibikFromUser(u.id, item.id)} className="absolute top-2 right-2 p-1.5 bg-red-500/10 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all" title="Удалить предмет">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

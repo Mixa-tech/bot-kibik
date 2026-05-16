@@ -45,10 +45,10 @@ export function ClickerPage() {
     
     // --- АНТИЧИТ ---
     clickTimes.current.push(now);
-    if (clickTimes.current.length > 20) clickTimes.current.shift();
-    if (clickTimes.current.length === 20) {
-      // Если 20 кликов сделано меньше чем за 1.2 секунды (нереально для человека)
-      if (now - clickTimes.current[0] < 1200) {
+    if (clickTimes.current.length > 35) clickTimes.current.shift();
+    if (clickTimes.current.length === 35) {
+      // Если 35 кликов сделано меньше чем за 1 секунду (нереально для человека)
+      if (now - clickTimes.current[0] < 1000) {
         handleCheatBan(myId);
         return;
       }

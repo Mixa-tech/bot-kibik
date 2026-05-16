@@ -35,6 +35,7 @@ export interface AppState {
   unbanUser: (userId: string) => void;
   handleCheatBan: (userId: string) => void;
   addKibikToUser: (userId: string, item: InventoryItem) => void;
+  removeKibikFromUser: (userId: string, kibikId: string) => void;
   appError: string | null;
   trades: Trade[];
   syncClicker: (userId: string, crystals: number, clickPower: number) => void;
@@ -258,6 +259,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }).catch(err => setAppError(`Сбой сети инвентаря: ${err.message || String(err)}`));
   };
 
+  const removeKibikFromUser = (userId: string, kibikId: string) => {
+    setUsers((prev) => {
+      const user = prev.find(u => u.id === userId);
+      if (!user) return prev;
+      
+      const newInventory = (user.inventory || []).filter(i => i.id !== kibikId);
+      const newKibiks = newInventory.length;
+      const newLevel = Math.max(1, Math.floor(newKibiks / 3) + 1);
+
+      supabase.from("users").update({ inventory: newInventory, kibiks: newKibiks, level: newLevel }).eq("id", userId)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Ошибка удаления инвентаря:", error);
+            setAppError(`Ошибка инвентаря: ${error.message}`);
+          }
+        }).catch(err => setAppError(`Сбой сети инвентаря: ${err.message || String(err)}`));
+
+      return prev.map((u) => 
+        u.id === userId ? { ...u, inventory: newInventory, kibiks: newKibiks, level: newLevel } : u
+      );
+    });
+  };
+
   const createTrade = async (receiverId: string, offer: InventoryItem, request: InventoryItem) => {
     const currentUserId = tgUser ? tgUser.id.toString() : "12345";
     const newTrade = {
@@ -354,7 +378,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, addKibikToUser, appError, trades, syncClicker, createTrade, acceptTrade, declineTrade }}>
+    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, addKibikToUser, removeKibikFromUser, appError, trades, syncClicker, createTrade, acceptTrade, declineTrade }}>
       {children}
     </AppContext.Provider>
   );
