@@ -21,7 +21,10 @@ export function ClickerPage() {
   const dbCrystals = currentUser?.crystals || 0;
   const currentPower = currentUser?.clickPower || 1;
   
-  const [uncommitted, setUncommitted] = useState(0);
+  const [uncommitted, setUncommitted] = useState(() => {
+    const saved = localStorage.getItem(`kibik_clicks_${myId}`);
+    return saved ? parseInt(saved, 10) || 0 : 0;
+  });
   const displayCrystals = dbCrystals + uncommitted;
   
   const [floatingTexts, setFloatingTexts] = useState<{ id: number; x: number; y: number; val: number }[]>([]);
@@ -38,6 +41,15 @@ export function ClickerPage() {
     latestState.current = { myId, dbCrystals, currentPower, uncommitted };
   }, [myId, dbCrystals, currentPower, uncommitted]);
 
+  // Сохраняем локальные клики в память телефона, чтобы не терялись при резком закрытии Telegram
+  useEffect(() => {
+    if (uncommitted > 0) {
+      localStorage.setItem(`kibik_clicks_${myId}`, uncommitted.toString());
+    } else {
+      localStorage.removeItem(`kibik_clicks_${myId}`);
+    }
+  }, [uncommitted, myId]);
+
   // Экстренное сохранение при закрытии бота, сворачивании Telegram или смене вкладки
   useEffect(() => {
     const forceSync = () => {
@@ -46,6 +58,7 @@ export function ClickerPage() {
         syncClicker(state.myId, state.dbCrystals + state.uncommitted, state.currentPower);
         state.uncommitted = 0; // Обнуляем сразу, чтобы избежать двойного сохранения
         setUncommitted(0);
+        localStorage.removeItem(`kibik_clicks_${state.myId}`);
       }
     };
 
@@ -63,19 +76,18 @@ export function ClickerPage() {
     };
   }, [syncClicker]);
 
-  // Интеллектуальная синхронизация: объединяем локальные клики с обновлениями извне (Realtime)
+  // Интеллектуальная синхронизация (каждую секунду скидываем клики на сервер без сброса таймера)
   useEffect(() => {
     const interval = setInterval(() => {
-      setUncommitted(prev => {
-        if (prev !== 0) {
-          syncClicker(myId, dbCrystals + prev, currentPower);
-          return 0; // Сбрасываем локальные клики после отправки
-        }
-        return prev;
-      });
-    }, 2000);
+      const state = latestState.current;
+      if (state.uncommitted > 0) {
+        syncClicker(state.myId, state.dbCrystals + state.uncommitted, state.currentPower);
+        state.uncommitted = 0;
+        setUncommitted(0);
+      }
+    }, 1000);
     return () => clearInterval(interval);
-  }, [dbCrystals, currentPower, myId, syncClicker]);
+  }, [syncClicker]);
 
   const handleTap = (e: React.TouchEvent | React.MouseEvent) => {
     const now = Date.now();
