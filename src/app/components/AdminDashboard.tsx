@@ -3,12 +3,17 @@ import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, Che
 import { useApp } from "../AppContext";
 
 export function AdminDashboard() {
-  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, giveCrystals } = useApp();
-  const [pin, setPin] = useState("");
-  const [auth, setAuth] = useState(false);
+  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, giveCrystals, role, tgUser, transferKibik } = useApp();
+  const myId = tgUser ? tgUser.id.toString() : "12345";
+  const currentUser = users.find(u => u.id === myId);
+
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
-  const ADMIN_PIN = "7777"; // СЕКРЕТНЫЙ ПИНКОД (Можешь поменять на любой свой)
+  const [banModalUser, setBanModalUser] = useState<any>(null);
+  const [banDays, setBanDays] = useState("30");
+  const [banReason, setBanReason] = useState("");
+
+  const [transferModalUser, setTransferModalUser] = useState<any>(null);
 
   // Admin form state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,33 +72,12 @@ export function AdminDashboard() {
     setTimeout(() => setStatus("idle"), 2000);
   };
 
-  if (!auth) {
+  if (role !== "admin" && role !== "creator") {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 text-white font-sans">
-        <div className="bg-[#111] border border-[#222] rounded-3xl p-10 flex flex-col items-center max-w-md w-full shadow-2xl">
-          <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mb-6 border border-blue-500/20">
-            <ShieldAlert size={40} className="text-blue-500" />
-          </div>
-          <h1 className="text-2xl font-black mb-2 tracking-wide">АДМИН ПАНЕЛЬ</h1>
-          <p className="text-sm text-neutral-400 mb-8 text-center">Введите секретный PIN-код для доступа к управлению</p>
-          
-          <input
-            type="password"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && pin === ADMIN_PIN) setAuth(true); }}
-            className="bg-[#0a0a0a] border border-[#333] rounded-xl px-4 py-4 text-center tracking-[1em] text-2xl outline-none focus:border-blue-500 w-full mb-4 font-mono transition-colors"
-            placeholder="••••"
-            maxLength={4}
-          />
-          
-          <button
-            onClick={() => { if (pin === ADMIN_PIN) setAuth(true); else { setPin(""); alert("Неверный пинкод!"); } }}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-4 font-bold tracking-wider transition-colors"
-          >
-            ВОЙТИ В СИСТЕМУ
-          </button>
-        </div>
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 text-white font-sans text-center">
+        <ShieldAlert size={60} className="text-red-500 mb-6" />
+        <h1 className="text-3xl font-black mb-2 tracking-wide">ДОСТУП ЗАПРЕЩЕН</h1>
+        <p className="text-neutral-400">Авторизация в панели управления возможна только через Telegram.<br/>Ваша текущая роль: {role}</p>
       </div>
     );
   }
@@ -111,7 +95,7 @@ export function AdminDashboard() {
               <p className="text-sm text-neutral-400">Панель управления администратора</p>
             </div>
           </div>
-          <button onClick={() => {setAuth(false); setPin("");}} className="flex items-center gap-2 text-neutral-400 hover:text-white bg-[#1a1a1a] px-4 py-2 rounded-lg transition-colors border border-[#333]">
+          <button onClick={() => { window.location.search = ""; }} className="flex items-center gap-2 text-neutral-400 hover:text-white bg-[#1a1a1a] px-4 py-2 rounded-lg transition-colors border border-[#333]">
             <LogOut size={16} /> Выйти
           </button>
         </div>
@@ -204,6 +188,8 @@ export function AdminDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button onClick={() => setTransferModalUser(u)} className="bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Передать кибик">🎁</button>
+
                       <button onClick={() => {
                         const amountStr = window.prompt(`Выдать кристаллы игроку ${u.name}?\nВведите количество (можно с минусом, чтобы забрать):`);
                         if (!amountStr) return;
@@ -214,13 +200,13 @@ export function AdminDashboard() {
                       }} className="bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 hover:bg-cyan-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Выдать кристаллы">+💎</button>
 
                       <button onClick={() => setSelectedUser(u)} className="bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Инвентарь</button>
-                      {isBanned ? (
-                        <button onClick={() => unbanUser(u.id)} className="bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Разбан</button>
-                      ) : (
-                        <button onClick={() => {
-                          const d = new Date(); d.setDate(d.getDate() + 30);
-                          banUser(u.id, d, "Бан администратором из панели");
-                        }} className="bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Бан</button>
+                      
+                      {(role === "admin" || (role === "creator" && u.role !== "admin" && u.role !== "creator")) && (
+                        isBanned ? (
+                          <button onClick={() => unbanUser(u.id)} className="bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Разбан</button>
+                        ) : (
+                          <button onClick={() => { setBanModalUser(u); setBanDays("30"); setBanReason(""); }} className="bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Бан</button>
+                        )
                       )}
                     </div>
                   </div>
@@ -262,6 +248,63 @@ export function AdminDashboard() {
                     <button onClick={() => removeKibikFromUser(u.id, item.id)} className="absolute top-2 right-2 p-1.5 bg-red-500/10 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all" title="Удалить предмет">
                       <Trash2 size={14} />
                     </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Ban Modal */}
+      {banModalUser && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#111] border border-[#222] rounded-3xl p-6 w-full max-w-sm flex flex-col shadow-2xl">
+            <h2 className="text-xl font-bold mb-2">Забанить {banModalUser.name}</h2>
+            <p className="text-xs text-neutral-400 mb-4">Укажите срок и причину блокировки</p>
+            <input type="number" value={banDays} onChange={e => setBanDays(e.target.value)} placeholder="Количество дней" className="w-full bg-[#0a0a0a] border border-[#333] rounded-xl px-4 py-3 mb-3 outline-none focus:border-red-500 transition-colors" />
+            <input type="text" value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="Причина бана" className="w-full bg-[#0a0a0a] border border-[#333] rounded-xl px-4 py-3 mb-6 outline-none focus:border-red-500 transition-colors" />
+            <div className="flex gap-3">
+              <button onClick={() => setBanModalUser(null)} className="flex-1 py-3 rounded-xl bg-[#222] text-white hover:bg-[#333] transition-colors font-semibold">Отмена</button>
+              <button onClick={() => {
+                const days = parseInt(banDays) || 30;
+                const d = new Date(); d.setDate(d.getDate() + days);
+                banUser(banModalUser.id, d, banReason || "Нарушение правил");
+                setBanModalUser(null);
+              }} className="flex-1 py-3 rounded-xl bg-red-600/20 text-red-500 hover:bg-red-600/30 border border-red-500/30 transition-colors font-semibold">Подтвердить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Modal */}
+      {transferModalUser && (() => {
+        const myInv = currentUser?.inventory || [];
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="bg-[#111] border border-[#222] rounded-3xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-xl font-bold">Передать кибик</h2>
+                  <p className="text-sm text-neutral-400">Выберите кибик из своего инвентаря для {transferModalUser.name}</p>
+                </div>
+                <button onClick={() => setTransferModalUser(null)} className="p-2 bg-[#222] hover:bg-[#333] rounded-full transition-colors"><X size={20} /></button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 scrollbar-thin">
+                {myInv.length === 0 && <p className="text-neutral-500 col-span-full text-center py-10">Ваш инвентарь пуст</p>}
+                {myInv.map((item: any) => (
+                  <div key={item.id} onClick={() => {
+                    transferKibik(myId, transferModalUser.id, item.id);
+                    setTransferModalUser(null);
+                  }} className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 flex flex-col items-center gap-2 cursor-pointer group hover:border-purple-500 transition-colors">
+                    {/^(https?|data|blob):/.test(item.emoji) ? (
+                      <img src={item.emoji} alt={item.name} className="w-10 h-10 object-cover rounded-lg mb-1" />
+                    ) : (
+                      <div className="text-4xl mb-1">{item.emoji}</div>
+                    )}
+                    <div className="text-xs font-bold text-center w-full truncate">{item.name}</div>
+                    <div className="mt-2 w-full py-1.5 rounded-lg bg-purple-500/10 text-purple-400 text-[10px] text-center font-bold opacity-0 group-hover:opacity-100 transition-opacity">Передать</div>
                   </div>
                 ))}
               </div>

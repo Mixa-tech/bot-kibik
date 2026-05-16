@@ -43,6 +43,7 @@ export interface AppState {
   handleCheatBan: (userId: string) => void;
   giveCrystals: (userId: string, amount: number) => void;
   addKibikToUser: (userId: string, item: InventoryItem) => void;
+  transferKibik: (senderId: string, receiverId: string, kibikId: string) => void;
   removeKibikFromUser: (userId: string, kibikId: string) => void;
   appError: string | null;
   trades: Trade[];
@@ -299,6 +300,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }).catch(err => setAppError(`Сбой сети инвентаря: ${err.message || String(err)}`));
   };
 
+  const transferKibik = (senderId: string, receiverId: string, kibikId: string) => {
+    setUsers((prev) => {
+      const sender = prev.find(u => u.id === senderId);
+      const receiver = prev.find(u => u.id === receiverId);
+      if (!sender || !receiver) return prev;
+      
+      const kibik = sender.inventory?.find(i => i.id === kibikId);
+      if (!kibik) return prev;
+
+      const newSenderInv = sender.inventory!.filter(i => i.id !== kibikId);
+      const newReceiverInv = [...(receiver.inventory || []), { ...kibik, addedAt: new Date() }];
+
+      const sKibiks = newSenderInv.length;
+      const rKibiks = newReceiverInv.length;
+      const sLevel = Math.max(1, Math.floor(sKibiks / 3) + 1);
+      const rLevel = Math.max(1, Math.floor(rKibiks / 3) + 1);
+
+      supabase.from("users").update({ inventory: newSenderInv, kibiks: sKibiks, level: sLevel }).eq("id", senderId).then();
+      supabase.from("users").update({ inventory: newReceiverInv, kibiks: rKibiks, level: rLevel }).eq("id", receiverId).then();
+
+      return prev.map(u => {
+        if (u.id === senderId) return { ...u, inventory: newSenderInv, kibiks: sKibiks, level: sLevel };
+        if (u.id === receiverId) return { ...u, inventory: newReceiverInv, kibiks: rKibiks, level: rLevel };
+        return u;
+      });
+    });
+  };
+
   const removeKibikFromUser = (userId: string, kibikId: string) => {
     setUsers((prev) => {
       const user = prev.find(u => u.id === userId);
@@ -474,7 +503,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, giveCrystals, addKibikToUser, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
+    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, giveCrystals, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
       {children}
     </AppContext.Provider>
   );
