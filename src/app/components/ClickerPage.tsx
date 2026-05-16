@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Zap } from "lucide-react";
+import { Zap, X, Trash2, FolderOpen, Save, Download } from "lucide-react";
 import { useTheme, glass, tc } from "./ThemeContext";
 import { useApp } from "../AppContext";
 
@@ -9,6 +9,13 @@ const getUpgradeCost = (currentPower: number) => {
   if (currentPower <= 20) return 50000;
   return 100000;
 };
+
+interface SaveSlot {
+  id: string;
+  date: number;
+  crystals: number;
+  power: number;
+}
 
 export function ClickerPage() {
   const { isDark } = useTheme();
@@ -50,6 +57,11 @@ export function ClickerPage() {
     }
   }, [uncommitted, myId]);
 
+  // Сохраняем слоты сохранений в память устройства
+  useEffect(() => {
+    localStorage.setItem(`kibik_saves_${myId}`, JSON.stringify(saves));
+  }, [saves, myId]);
+
   // Экстренное сохранение при закрытии бота, сворачивании Telegram или смене вкладки
   useEffect(() => {
     const forceSync = () => {
@@ -83,6 +95,28 @@ export function ClickerPage() {
       localStorage.removeItem(`kibik_clicks_${myId}`);
     }
   };
+
+  const createSaveSlot = () => {
+    const newSave: SaveSlot = {
+      id: Date.now().toString(),
+      date: Date.now(),
+      crystals: displayCrystals,
+      power: currentPower,
+    };
+    setSaves(prev => [newSave, ...prev]);
+    syncClicker(myId, displayCrystals, currentPower);
+    setUncommitted(0);
+    localStorage.removeItem(`kibik_clicks_${myId}`);
+  };
+
+  const loadSaveSlot = (save: SaveSlot) => {
+    syncClicker(myId, save.crystals, save.power);
+    setUncommitted(0);
+    localStorage.removeItem(`kibik_clicks_${myId}`);
+    setShowSaveModal(false);
+  };
+
+  const deleteSaveSlot = (id: string) => setSaves(prev => prev.filter(s => s.id !== id));
 
   // Интеллектуальная синхронизация (каждую секунду скидываем клики на сервер без сброса таймера)
   useEffect(() => {
@@ -210,15 +244,58 @@ export function ClickerPage() {
           {currentPower >= MAX_POWER && <span className="text-xs text-yellow-400 mt-1">Максимальный уровень!</span>}
         </button>
 
-        <button
-          onClick={handleManualSave}
-          disabled={uncommitted === 0}
-          className="w-full py-3 rounded-2xl flex items-center justify-center disabled:opacity-50 transition-colors"
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
-        >
-          <span className="text-white font-semibold text-sm">💾 Сохранить вручную ({uncommitted} 💎)</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleManualSave}
+            disabled={uncommitted === 0}
+            className="flex-1 py-3 rounded-2xl flex items-center justify-center disabled:opacity-50 transition-colors"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            <span className="text-white font-semibold text-sm">💾 В базу ({uncommitted})</span>
+          </button>
+          
+          <button
+            onClick={() => setShowSaveModal(true)}
+            className="flex-1 py-3 rounded-2xl flex items-center justify-center transition-colors"
+            style={{ background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.3)" }}
+          >
+            <span className="text-blue-400 font-semibold text-sm flex items-center gap-2"><FolderOpen size={16}/> Слоты</span>
+          </button>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {showSaveModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm" onClick={() => setShowSaveModal(false)} />
+            <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="fixed bottom-10 left-4 right-4 z-50 rounded-3xl p-6 flex flex-col max-h-[70vh]" style={{ background: isDark ? "#111" : "#fff", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold" style={{ color: c.primary }}>Сохранения</h3>
+                <button onClick={() => setShowSaveModal(false)} className="p-2 rounded-full" style={glass(isDark, 0.1)}><X size={16} style={{ color: c.primary }} /></button>
+              </div>
+              <button onClick={createSaveSlot} className="w-full py-3 mb-4 rounded-xl font-bold flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-500 transition-colors">
+                <Save size={18} /> Создать точку сохранения
+              </button>
+              <div className="flex-1 overflow-y-auto flex flex-col gap-2 scrollbar-none pr-1">
+                {saves.length === 0 && <p className="text-center text-sm py-4" style={{ color: c.muted }}>Нет сохранений</p>}
+                {saves.map(save => (
+                  <div key={save.id} className="p-3 rounded-xl flex items-center justify-between border" style={{ ...glass(isDark, 0.05), borderColor: "rgba(255,255,255,0.05)" }}>
+                    <div>
+                      <div className="text-xs font-mono mb-1" style={{ color: c.muted }}>{new Date(save.date).toLocaleString()}</div>
+                      <div className="text-sm font-bold text-blue-400">{save.crystals.toLocaleString()} 💎</div>
+                      <div className="text-[10px]" style={{ color: c.muted }}>Сила клика: {save.power}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => loadSaveSlot(save)} className="p-2 bg-green-500/10 text-green-500 rounded-lg hover:bg-green-500/20 transition-colors" title="Загрузить"><Download size={16} /></button>
+                      <button onClick={() => deleteSaveSlot(save.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors" title="Удалить"><Trash2 size={16} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
