@@ -102,7 +102,7 @@ export function AdminDashboard() {
             </>
           ) : (
             <>
-              <p className="text-sm text-neutral-400 mb-6">Код отправлен в приложение (зайдите в бота)</p>
+              <p className="text-sm text-neutral-400 mb-6">Код отправлен в приложение (<strong>откройте саму игру</strong> на телефоне)</p>
               <input type="text" value={loginPin} onChange={e => setLoginPin(e.target.value)} placeholder="4-значный код" className="w-full bg-[#0a0a0a] border border-[#333] rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500 transition-colors text-center font-mono tracking-widest text-2xl" maxLength={4} />
               <button onClick={() => {
                 if (verifyLoginCode(loginUser, loginPin)) {

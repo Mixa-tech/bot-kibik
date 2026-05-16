@@ -262,6 +262,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (user.role !== "admin" && user.role !== "creator") { alert("У вас нет прав доступа к панели!"); return false; }
     
     const code = Math.floor(1000 + Math.random() * 9000).toString();
+    console.log("🔑 СЕКРЕТНЫЙ КОД (для разработчика, если не работает база):", code);
     const { error } = await supabase.from("users").update({ loginCode: code }).eq("id", user.id);
     if (error) { alert("Ошибка при отправке кода. Добавьте колонку loginCode в БД!"); return false; }
     return true;
