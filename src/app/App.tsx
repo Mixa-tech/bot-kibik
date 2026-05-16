@@ -24,7 +24,11 @@ const TABS = [
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [isDark, setIsDark] = useState(true);
-  const { tgUser, users, addKibikToUser, appError, clearLoginCode, globalKibiks } = useApp();
+  const [isGuestMode, setIsGuestMode] = useState(false);
+  const [loginUser, setLoginUser] = useState("");
+  const [loginPin, setLoginPin] = useState("");
+  const [loginStep, setLoginStep] = useState<1 | 2>(1);
+  const { tgUser, users, addKibikToUser, appError, clearLoginCode, globalKibiks, requestLoginCode, verifyLoginCode } = useApp();
 
   const currentUserId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find((u) => u.id === currentUserId);
@@ -62,6 +66,41 @@ function AppContent() {
           <p className="text-sm"><strong className="text-white">Окончание:</strong> {new Date(currentUser.bannedUntil!).toLocaleString("ru-RU", {day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"})}</p>
         </div>
       </div>
+    );
+  }
+
+  // Окно входа для браузера (чтобы не сидеть под Web Guest)
+  if (currentUser?.id === "12345" && !isGuestMode && !urlParams.get("admin")) {
+    return (
+      <ThemeContext.Provider value={{ isDark }}>
+        <div className="size-full fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 text-center font-sans" style={{ background: bg, color: isDark ? "#fff" : "#000" }}>
+          <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mb-6">
+             <User size={32} className="text-blue-500" />
+          </div>
+          <h1 className="text-2xl font-black mb-2 tracking-wide">ВХОД В ИГРУ</h1>
+          
+          {loginStep === 1 ? (
+            <div className="w-full max-w-sm">
+              <p className="text-sm opacity-60 mb-6">Игра открыта в браузере.<br/>Введите ваш @username для входа</p>
+              <input type="text" value={loginUser} onChange={e => setLoginUser(e.target.value)} placeholder="Ваш @username" className="w-full border rounded-xl px-4 py-3 mb-4 outline-none focus:border-blue-500 transition-colors text-center" style={{ background: isDark ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.5)", borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)", color: isDark ? "#fff" : "#000" }} />
+              <button onClick={async () => {
+                const ok = await requestLoginCode(loginUser, false);
+                if (ok) setLoginStep(2);
+              }} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3.5 font-bold tracking-wider transition-colors mb-3">
+                ПОЛУЧИТЬ КОД В БОТЕ
+              </button>
+              <button onClick={() => setIsGuestMode(true)} className="text-sm opacity-50 hover:opacity-100 transition-opacity">Продолжить как гость</button>
+            </div>
+          ) : (
+            <div className="w-full max-w-sm">
+              <p className="text-sm opacity-60 mb-6">Код отправлен в приложение (откройте игру на телефоне)</p>
+              <input type="text" value={loginPin} onChange={e => setLoginPin(e.target.value)} placeholder="4-значный код" className="w-full border rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500 transition-colors text-center font-mono tracking-widest text-2xl" maxLength={4} style={{ background: isDark ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.5)", borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)", color: isDark ? "#fff" : "#000" }} />
+              <button onClick={() => verifyLoginCode(loginUser, loginPin)} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3.5 font-bold tracking-wider transition-colors mb-2">ВОЙТИ</button>
+              <button onClick={() => setLoginStep(1)} className="w-full bg-transparent opacity-50 hover:opacity-100 rounded-xl py-3 text-sm transition-opacity">Назад</button>
+            </div>
+          )}
+        </div>
+      </ThemeContext.Provider>
     );
   }
 

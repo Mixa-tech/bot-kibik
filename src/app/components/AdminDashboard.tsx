@@ -124,7 +124,7 @@ export function AdminDashboard() {
               <p className="text-sm text-neutral-400 mb-6">Введите свой @username для получения кода</p>
               <input type="text" value={loginUser} onChange={e => setLoginUser(e.target.value)} placeholder="Ваш @username" className="w-full bg-[#0a0a0a] border border-[#333] rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500 transition-colors text-center" />
               <button onClick={async () => {
-                const ok = await requestLoginCode(loginUser);
+                const ok = await requestLoginCode(loginUser, true);
                 if (ok) setLoginStep(2);
               }} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3.5 font-bold tracking-wider transition-colors">
                 ПОЛУЧИТЬ КОД В БОТЕ

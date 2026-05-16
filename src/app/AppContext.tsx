@@ -41,7 +41,7 @@ export interface AppState {
   banUser: (userId: string, until: Date, reason: string) => void;
   unbanUser: (userId: string) => void;
   handleCheatBan: (userId: string) => void;
-  requestLoginCode: (username: string) => Promise<boolean>;
+  requestLoginCode: (username: string, requireAdmin?: boolean) => Promise<boolean>;
   verifyLoginCode: (username: string, code: string) => boolean;
   clearLoginCode: () => void;
   giveCrystals: (userId: string, amount: number) => void;
@@ -255,11 +255,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const requestLoginCode = async (username: string) => {
+  const requestLoginCode = async (username: string, requireAdmin = false) => {
     const formatted = username.startsWith("@") ? username.toLowerCase() : `@${username.toLowerCase()}`;
     const user = users.find(u => u.username?.toLowerCase() === formatted);
     if (!user) { alert("Пользователь не найден в базе!"); return false; }
-    if (user.role !== "admin" && user.role !== "creator") { alert("У вас нет прав доступа к панели!"); return false; }
+    if (requireAdmin && user.role !== "admin" && user.role !== "creator") { alert("У вас нет прав доступа!"); return false; }
     
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     console.log("🔑 СЕКРЕТНЫЙ КОД (для разработчика, если не работает база):", code);
