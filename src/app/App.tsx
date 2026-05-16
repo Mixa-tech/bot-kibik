@@ -201,11 +201,21 @@ function AppContent() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.18 }}
             >
-              {activeTab === "home"      && <HomePage onAddItem={addItem} inventory={inventory} />}
-              {activeTab === "inventory" && <InventoryPage inventory={inventory} />}
-              {activeTab === "market"    && <MarketPage />}
-              {activeTab === "clicker"   && <ClickerPage />}
-              {activeTab === "profile"   && <ProfilePage inventory={inventory} myName={myName} />}
+              {!!globalKibiks[`TAB_DISABLED_${activeTab.toUpperCase()}`] && !isMixazx ? (
+                <div className="flex flex-col items-center justify-center h-full pt-32 text-center px-6">
+                  <ShieldAlert size={60} className="text-red-500 mb-6 opacity-80" />
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: isDark ? "#fff" : "#000" }}>Раздел недоступен</h2>
+                  <p className="text-sm text-neutral-400">Администратор временно отключил эту вкладку. Пожалуйста, зайдите позже.</p>
+                </div>
+              ) : (
+                <>
+                  {activeTab === "home"      && <HomePage onAddItem={addItem} inventory={inventory} />}
+                  {activeTab === "inventory" && <InventoryPage inventory={inventory} />}
+                  {activeTab === "market"    && <MarketPage />}
+                  {activeTab === "clicker"   && <ClickerPage />}
+                  {activeTab === "profile"   && <ProfilePage inventory={inventory} myName={myName} />}
+                </>
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -226,57 +236,66 @@ function AppContent() {
           >
             {TABS.map(({ key, label, Icon }) => {
               const active = activeTab === key;
+              const isDisabled = !!globalKibiks[`TAB_DISABLED_${key.toUpperCase()}`];
               const activeIconColor = isDark ? "#ffffff" : "#0d0d0d";
               const inactiveIconColor = isDark ? "rgba(255,255,255,0.32)" : "rgba(0,0,0,0.28)";
               const activePillBg = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)";
               const activePillBorder = isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.12)";
 
               return (
-                <motion.button
-                  key={key}
-                  whileTap={{ scale: 0.88 }}
-                  onClick={() => setActiveTab(key)}
-                  className="flex flex-col items-center gap-1 px-5 py-1.5 rounded-xl relative"
-                  style={{ minWidth: 72 }}
-                >
-                  {active && (
-                    <motion.div
-                      layoutId="nav-pill"
-                      className="absolute inset-0 rounded-xl"
-                      style={{ background: activePillBg, border: `1px solid ${activePillBorder}` }}
-                      transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                    />
+                <div key={key} className="relative flex flex-col items-center" style={{ minWidth: 72 }}>
+                  {isDisabled && (
+                    <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-red-500/90 backdrop-blur text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
+                      Недоступно
+                    </div>
                   )}
-
-                  <div className="relative z-10">
-                    <Icon
-                      size={22}
-                      style={{ color: active ? activeIconColor : inactiveIconColor, transition: "color 0.2s" }}
-                    />
-                    {/* Inventory badge */}
-                    {key === "inventory" && inventory.length > 0 && (
-                      <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-1.5 -right-2 w-4 h-4 rounded-full flex items-center justify-center"
-                        style={{
-                          background: isDark ? "rgba(255,255,255,0.9)" : "rgba(15,15,15,0.85)",
-                          color: isDark ? "#000" : "#fff",
-                          fontSize: 9,
-                        }}
-                      >
-                        {inventory.length > 9 ? "9+" : inventory.length}
-                      </motion.span>
-                    )}
-                  </div>
-
-                  <span
-                    className="relative z-10 text-[10px]"
-                    style={{ color: active ? activeIconColor : inactiveIconColor, transition: "color 0.2s" }}
+                  <motion.button
+                    whileTap={isDisabled && !isMixazx ? {} : { scale: 0.88 }}
+                    onClick={() => {
+                      if (isDisabled && !isMixazx) return;
+                      setActiveTab(key);
+                    }}
+                    className={`flex flex-col items-center gap-1 px-5 py-1.5 rounded-xl w-full transition-all ${isDisabled && !isMixazx ? 'opacity-30 grayscale cursor-not-allowed' : ''} ${isDisabled && isMixazx ? 'opacity-70' : ''}`}
                   >
-                    {label}
-                  </span>
-                </motion.button>
+                    {active && (
+                      <motion.div
+                        layoutId="nav-pill"
+                        className="absolute inset-0 rounded-xl"
+                        style={{ background: activePillBg, border: `1px solid ${activePillBorder}` }}
+                        transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                      />
+                    )}
+
+                    <div className="relative z-10">
+                      <Icon
+                        size={22}
+                        style={{ color: active ? activeIconColor : inactiveIconColor, transition: "color 0.2s" }}
+                      />
+                      {/* Inventory badge */}
+                      {key === "inventory" && inventory.length > 0 && (
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="absolute -top-1.5 -right-2 w-4 h-4 rounded-full flex items-center justify-center"
+                          style={{
+                            background: isDark ? "rgba(255,255,255,0.9)" : "rgba(15,15,15,0.85)",
+                            color: isDark ? "#000" : "#fff",
+                            fontSize: 9,
+                          }}
+                        >
+                          {inventory.length > 9 ? "9+" : inventory.length}
+                        </motion.span>
+                      )}
+                    </div>
+
+                    <span
+                      className="relative z-10 text-[10px]"
+                      style={{ color: active ? activeIconColor : inactiveIconColor, transition: "color 0.2s" }}
+                    >
+                      {label}
+                    </span>
+                  </motion.button>
+                </div>
               );
             })}
           </nav>

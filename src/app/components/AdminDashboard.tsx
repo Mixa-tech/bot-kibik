@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X, Download } from "lucide-react";
+import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X, Download, ToggleLeft } from "lucide-react";
 import { useApp } from "../AppContext";
 
 export function AdminDashboard() {
@@ -24,6 +24,14 @@ export function AdminDashboard() {
   const [loginStep, setLoginStep] = useState<1 | 2>(1);
   const [isAuth, setIsAuth] = useState(false);
   const [globalTransfer, setGlobalTransfer] = useState<{ sourceUserId: string, itemId: string, item: any } | null>(null);
+
+  const TABS_INFO = [
+    { key: "home", label: "Главная" },
+    { key: "inventory", label: "Инвентарь" },
+    { key: "market", label: "Биржа" },
+    { key: "clicker", label: "Кликер" },
+    { key: "profile", label: "Профиль" },
+  ];
 
   const isMaintenance = !!globalKibiks["SYSTEM_MAINTENANCE"];
   const toggleMaintenance = () => {
@@ -176,9 +184,37 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {role === "admin" && (
+          <div className="bg-[#111] border border-[#222] rounded-3xl p-6 mb-6 shadow-xl">
+            <h2 className="text-lg font-bold flex items-center gap-2 text-orange-400 mb-4">
+              <ToggleLeft size={20}/> Управление вкладками
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {TABS_INFO.map(tab => {
+                const code = `TAB_DISABLED_${tab.key.toUpperCase()}`;
+                const isDisabled = !!globalKibiks[code];
+                return (
+                  <button 
+                    key={tab.key}
+                    onClick={() => {
+                      if (isDisabled) removeGlobalKibik(code);
+                      else addGlobalKibik(code, { code, name: `Вкладка ${tab.label}`, rarity: "common", emoji: "🚫" });
+                    }}
+                    className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-sm font-bold border transition-colors ${
+                      isDisabled ? 'bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/30 hover:bg-green-500/20'
+                    }`}
+                  >
+                    {tab.label}: {isDisabled ? "ОТКЛЮЧЕНО" : "РАБОТАЕТ"}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className={`grid grid-cols-1 ${role === 'admin' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6`}>
           {/* Колонна 1: Создание */}
-          <div className="bg-[#111] border border-[#222] rounded-3xl p-6 flex flex-col gap-5">
+          <div className="bg-[#111] border border-[#222] rounded-3xl p-6 flex flex-col gap-5 shadow-xl">
             <h2 className="text-lg font-bold flex items-center gap-2 text-green-400"><PlusCircle size={20}/> Создать Кибик</h2>
             <div className="flex flex-col gap-3">
               <div>
@@ -217,11 +253,11 @@ export function AdminDashboard() {
           </div>
 
           {/* Колонна 2: Активные коды */}
-          <div className="bg-[#111] border border-[#222] rounded-3xl p-6 flex flex-col gap-4 lg:h-[600px]">
-            <h2 className="text-lg font-bold flex items-center gap-2 text-purple-400"><Package size={20}/> Доступные коды ({Object.keys(globalKibiks).length})</h2>
+          <div className="bg-[#111] border border-[#222] rounded-3xl p-6 flex flex-col gap-4 lg:h-[600px] shadow-xl">
+            <h2 className="text-lg font-bold flex items-center gap-2 text-purple-400"><Package size={20}/> Доступные коды ({Object.keys(globalKibiks).filter(k => !k.startsWith("TAB_DISABLED_") && k !== "SYSTEM_MAINTENANCE").length})</h2>
             <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-2 scrollbar-thin">
-              {Object.values(globalKibiks).length === 0 && <p className="text-neutral-500 text-center mt-10">Нет активных кодов</p>}
-              {Object.values(globalKibiks).reverse().map(k => (
+              {Object.values(globalKibiks).filter(k => !k.code.startsWith("TAB_DISABLED_") && k.code !== "SYSTEM_MAINTENANCE").length === 0 && <p className="text-neutral-500 text-center mt-10">Нет активных кодов</p>}
+              {Object.values(globalKibiks).filter(k => !k.code.startsWith("TAB_DISABLED_") && k.code !== "SYSTEM_MAINTENANCE").reverse().map(k => (
                 <div key={k.code} className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 flex justify-between items-center group hover:border-[#444] transition-colors">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-2xl overflow-hidden shrink-0">
@@ -240,55 +276,57 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          {/* Колонна 3: Пользователи */}
-          <div className="bg-[#111] border border-[#222] rounded-3xl p-6 flex flex-col gap-4 lg:h-[600px]">
-            <h2 className="text-lg font-bold flex items-center gap-2 text-blue-400"><Users size={20}/> Игроки ({users.length})</h2>
-            <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-2 scrollbar-thin">
-              {users.map(u => {
-                const isBanned = u.bannedUntil && new Date(u.bannedUntil) > new Date();
-                return (
-                  <div key={u.id} className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 flex justify-between items-center hover:border-[#333] transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#1a1a1a] rounded-lg flex items-center justify-center font-bold text-neutral-400 shrink-0">
-                        {u.avatar}
-                      </div>
-                      <div>
-                        <div className="font-bold text-sm text-white flex items-center gap-1">
-                          {u.name}
-                          {u.role === "admin" && <span className="text-yellow-500 text-[10px] ml-1">👑</span>}
+          {role === "admin" && (
+            <>
+              {/* Колонна 3: Пользователи */}
+              <div className="bg-[#111] border border-[#222] rounded-3xl p-6 flex flex-col gap-4 lg:h-[600px] shadow-xl">
+                <h2 className="text-lg font-bold flex items-center gap-2 text-blue-400"><Users size={20}/> Игроки ({users.length})</h2>
+                <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-2 scrollbar-thin">
+                  {users.map(u => {
+                    const isBanned = u.bannedUntil && new Date(u.bannedUntil) > new Date();
+                    return (
+                      <div key={u.id} className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3 flex justify-between items-center hover:border-[#333] transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-[#1a1a1a] rounded-lg flex items-center justify-center font-bold text-neutral-400 shrink-0">
+                            {u.avatar}
+                          </div>
+                          <div>
+                            <div className="font-bold text-sm text-white flex items-center gap-1">
+                              {u.name}
+                              {u.role === "admin" && <span className="text-yellow-500 text-[10px] ml-1">👑</span>}
+                            </div>
+                            <div className="text-xs text-neutral-500 mt-0.5 flex gap-2">
+                              <span>Ур.{u.level}</span>
+                              <span>💎{u.crystals || 0}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-xs text-neutral-500 mt-0.5 flex gap-2">
-                          <span>Ур.{u.level}</span>
-                          <span>💎{u.crystals || 0}</span>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => toggleUserMaintenance(u.id, !u.showMaintenance)} className={`border text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${u.showMaintenance ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20' : 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20 hover:bg-neutral-500/20'}`} title="Экран тех. работ">{u.showMaintenance ? "Снять тех.блок" : "Тех.блок"}</button>
+
+                          <button onClick={() => setTransferModalUser(u)} className="bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Передать кибик">🎁</button>
+
+                          <button onClick={() => {
+                            setEditSaveUser(u);
+                            setEditCrystals(u.crystals?.toString() || "0");
+                            setEditPower(u.clickPower?.toString() || "1");
+                          }} className="bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 hover:bg-cyan-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Редактировать сохранение">💾 Сохранение</button>
+
+                          <button onClick={() => setSelectedUser(u)} className="bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Инвентарь</button>
+                          
+                          {isBanned ? (
+                            <button onClick={() => unbanUser(u.id)} className="bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Разбан</button>
+                          ) : (
+                            <button onClick={() => { setBanModalUser(u); setBanDays("30"); setBanReason(""); }} className="bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Бан</button>
+                          )}
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => toggleUserMaintenance(u.id, !u.showMaintenance)} className={`border text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${u.showMaintenance ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20' : 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20 hover:bg-neutral-500/20'}`} title="Экран тех. работ">{u.showMaintenance ? "Снять тех.блок" : "Тех.блок"}</button>
-
-                      <button onClick={() => setTransferModalUser(u)} className="bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Передать кибик">🎁</button>
-
-                      <button onClick={() => {
-                        setEditSaveUser(u);
-                        setEditCrystals(u.crystals?.toString() || "0");
-                        setEditPower(u.clickPower?.toString() || "1");
-                      }} className="bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 hover:bg-cyan-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Редактировать сохранение">💾 Сохранение</button>
-
-                      <button onClick={() => setSelectedUser(u)} className="bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Инвентарь</button>
-                      
-                      {(role === "admin" || (role === "creator" && u.role !== "admin" && u.role !== "creator")) && (
-                        isBanned ? (
-                          <button onClick={() => unbanUser(u.id)} className="bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Разбан</button>
-                        ) : (
-                          <button onClick={() => { setBanModalUser(u); setBanDays("30"); setBanReason(""); }} className="bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Бан</button>
-                        )
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
