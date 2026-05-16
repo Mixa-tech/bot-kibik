@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X } from "lucide-react";
+import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X, Download } from "lucide-react";
 import { useApp } from "../AppContext";
 
 export function AdminDashboard() {
@@ -280,6 +280,11 @@ export function AdminDashboard() {
                     )}
                     <div className="text-xs font-bold text-center w-full truncate">{item.name}</div>
                     <div className="text-[10px] text-neutral-500">{item.rarity}</div>
+                    {u.id !== myId && (
+                      <button onClick={() => transferKibik(u.id, myId, item.id)} className="absolute top-2 right-[72px] p-1.5 bg-green-500/10 text-green-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-green-500/20 transition-all flex items-center justify-center" title="Забрать себе">
+                        <Download size={14} />
+                      </button>
+                    )}
                     <button onClick={() => setGlobalTransfer({ sourceUserId: u.id, itemId: item.id, item })} className="absolute top-2 right-10 p-1.5 bg-purple-500/10 text-purple-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-purple-500/20 transition-all" title="Передать игроку">
                       🎁
                     </button>
