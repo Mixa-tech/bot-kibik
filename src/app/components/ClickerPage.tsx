@@ -32,6 +32,37 @@ export function ClickerPage() {
   const MAX_CRYSTALS = 500000 + ((level - 1) * 100000);
   const MAX_POWER = 50;
 
+  // Храним актуальные данные в Ref, чтобы функция экстренного сохранения всегда видела свежие цифры
+  const latestState = useRef({ myId, dbCrystals, currentPower, uncommitted });
+  useEffect(() => {
+    latestState.current = { myId, dbCrystals, currentPower, uncommitted };
+  }, [myId, dbCrystals, currentPower, uncommitted]);
+
+  // Экстренное сохранение при закрытии бота, сворачивании Telegram или смене вкладки
+  useEffect(() => {
+    const forceSync = () => {
+      const state = latestState.current;
+      if (state.uncommitted > 0) {
+        syncClicker(state.myId, state.dbCrystals + state.uncommitted, state.currentPower);
+        state.uncommitted = 0; // Обнуляем сразу, чтобы избежать двойного сохранения
+        setUncommitted(0);
+      }
+    };
+
+    const handleVisibility = () => { if (document.visibilityState === 'hidden') forceSync(); };
+
+    window.addEventListener('beforeunload', forceSync);
+    window.addEventListener('pagehide', forceSync);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('beforeunload', forceSync);
+      window.removeEventListener('pagehide', forceSync);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      forceSync(); // Вызывается, если мы уходим с вкладки "Кликер" на вкладку "Профиль", например
+    };
+  }, [syncClicker]);
+
   // Интеллектуальная синхронизация: объединяем локальные клики с обновлениями извне (Realtime)
   useEffect(() => {
     const interval = setInterval(() => {
