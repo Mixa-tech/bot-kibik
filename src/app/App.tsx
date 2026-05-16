@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Home, Package, User, Zap, ShieldAlert, Store, X } from "lucide-react";
 import { ThemeContext } from "./components/ThemeContext";
@@ -43,6 +43,16 @@ function AppContent() {
   const addItem = (item: InventoryItem) => {
     addKibikToUser(currentUserId, item);
   };
+
+  // Эффект для мгновенного выкидывания с отключенной вкладки
+  useEffect(() => {
+    if (globalKibiks[`TAB_DISABLED_${activeTab.toUpperCase()}`]) {
+      const firstAvailable = TABS.find(t => !globalKibiks[`TAB_DISABLED_${t.key.toUpperCase()}`]);
+      if (firstAvailable && firstAvailable.key !== activeTab) {
+        setActiveTab(firstAvailable.key);
+      }
+    }
+  }, [activeTab, globalKibiks]);
 
   const bg = isDark ? "#080810" : "#ededf5";
   const navBg = isDark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.72)";
@@ -201,7 +211,7 @@ function AppContent() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.18 }}
             >
-              {!!globalKibiks[`TAB_DISABLED_${activeTab.toUpperCase()}`] && !isMixazx ? (
+              {!!globalKibiks[`TAB_DISABLED_${activeTab.toUpperCase()}`] ? (
                 <div className="flex flex-col items-center justify-center h-full pt-32 text-center px-6">
                   <ShieldAlert size={60} className="text-red-500 mb-6 opacity-80" />
                   <h2 className="text-2xl font-bold mb-2" style={{ color: isDark ? "#fff" : "#000" }}>Раздел недоступен</h2>
@@ -250,12 +260,12 @@ function AppContent() {
                     </div>
                   )}
                   <motion.button
-                    whileTap={isDisabled && !isMixazx ? {} : { scale: 0.88 }}
+                    whileTap={isDisabled ? {} : { scale: 0.88 }}
                     onClick={() => {
-                      if (isDisabled && !isMixazx) return;
+                      if (isDisabled) return;
                       setActiveTab(key);
                     }}
-                    className={`flex flex-col items-center gap-1 px-5 py-1.5 rounded-xl w-full transition-all ${isDisabled && !isMixazx ? 'opacity-30 grayscale cursor-not-allowed' : ''} ${isDisabled && isMixazx ? 'opacity-70' : ''}`}
+                    className={`flex flex-col items-center gap-1 px-5 py-1.5 rounded-xl w-full transition-all ${isDisabled ? 'opacity-30 grayscale cursor-not-allowed' : ''}`}
                   >
                     {active && (
                       <motion.div
