@@ -26,9 +26,11 @@ export function AdminDashboard() {
     if (isMaintenance) {
       removeGlobalKibik("SYSTEM_MAINTENANCE");
     } else {
+      const text = window.prompt("Введите текст для экрана технических работ:", "Ведутся технические работы. Ожидайте новостей!");
+      if (text === null) return; // Если админ нажал "Отмена"
       addGlobalKibik("SYSTEM_MAINTENANCE", {
         code: "SYSTEM_MAINTENANCE",
-        name: "Технические работы",
+        name: text || "Ведутся технические работы. Ожидайте новостей!",
         rarity: "legendary",
         emoji: "🛠"
       });

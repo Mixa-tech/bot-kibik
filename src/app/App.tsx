@@ -110,16 +110,19 @@ function AppContent() {
   const showMaintenanceScreen = currentUser?.showMaintenance || (isGlobalMaintenance && !isMixazx);
 
   if (showMaintenanceScreen) {
+    const maintenanceText = isGlobalMaintenance 
+      ? (globalKibiks["SYSTEM_MAINTENANCE"]?.name || "Ведутся технические работы. Ожидайте новостей!")
+      : "Ведутся технические работы.\nВаш аккаунт временно ограничен.";
+
     return (
       <div className="size-full fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 text-center" style={{ background: "#0a0a0a", color: "#ffffff" }}>
         <ShieldAlert size={80} className="mb-6 text-white animate-pulse" />
         <h1 className="text-3xl font-black mb-4 tracking-widest leading-tight">ТЕХНИЧЕСКИЕ РАБОТЫ</h1>
-        <p className="text-sm text-neutral-400 mb-6 font-medium leading-relaxed">
-          Ожидание версии 0.5 beta.<br/>
-          Крупное исправление кликера и<br/>добавление новых функций.
+        <p className="text-sm text-neutral-400 mb-6 font-medium leading-relaxed whitespace-pre-wrap">
+          {maintenanceText}
         </p>
         <div className="bg-white/5 border border-white/10 rounded-2xl p-5 w-full max-w-sm">
-          <p className="text-sm text-neutral-300">Ожидайте новых новостей!</p>
+          <p className="text-sm text-neutral-300">Пожалуйста, зайдите позже.</p>
         </div>
       </div>
     );

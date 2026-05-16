@@ -545,6 +545,62 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Эффект для прослушивания базы данных в реальном времени для всех пользователей
+  useEffect(() => {
+    const channel = supabase.channel('db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
+        setUsers((prev) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const u = payload.new as any;
+            if (u.bannedUntil) u.bannedUntil = new Date(u.bannedUntil);
+            if (u.inventory) {
+              u.inventory = u.inventory.map((item: any) => ({ ...item, addedAt: new Date(item.addedAt) }));
+            }
+            const exists = prev.find((p) => p.id === u.id);
+            if (exists) return prev.map((p) => (p.id === u.id ? { ...p, ...u } : p));
+            return [u, ...prev];
+          }
+          if (payload.eventType === 'DELETE') return prev.filter((p) => p.id !== payload.old.id);
+          return prev;
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kibiks' }, (payload) => {
+        setGlobalKibiks((prev) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            return { ...prev, [payload.new.code]: payload.new };
+          }
+          if (payload.eventType === 'DELETE') {
+            const next = { ...prev };
+            delete next[payload.old.code];
+            return next;
+          }
+          return prev;
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trades' }, (payload) => {
+        setTrades((prev) => {
+          if (payload.eventType === 'INSERT') {
+            if (!prev.find((t) => t.id === payload.new.id)) return [payload.new as any, ...prev];
+            return prev;
+          }
+          if (payload.eventType === 'UPDATE') return prev.map((t) => (t.id === payload.new.id ? (payload.new as any) : t));
+          if (payload.eventType === 'DELETE') return prev.filter((t) => t.id !== payload.old.id);
+          return prev;
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'market' }, (payload) => {
+        setMarketListings((prev) => {
+          if (payload.eventType === 'INSERT') return [payload.new as any, ...prev];
+          if (payload.eventType === 'DELETE') return prev.filter((t) => t.id !== payload.old.id);
+          if (payload.eventType === 'UPDATE') return prev.map((t) => (t.id === payload.new.id ? (payload.new as any) : t));
+          return prev;
+        });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   return (
     <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, toggleUserMaintenance, requestLoginCode, verifyLoginCode, clearLoginCode, giveCrystals, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
       {children}
