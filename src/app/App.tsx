@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Home, Package, User, Zap, ShieldAlert, Store } from "lucide-react";
+import { Home, Package, User, Zap, ShieldAlert, Store, X } from "lucide-react";
 import { ThemeContext } from "./components/ThemeContext";
 import { HomePage } from "./components/HomePage";
 import { InventoryPage } from "./components/InventoryPage";
@@ -24,7 +24,7 @@ const TABS = [
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [isDark, setIsDark] = useState(true);
-  const { tgUser, users, addKibikToUser, appError } = useApp();
+  const { tgUser, users, addKibikToUser, appError, clearLoginCode } = useApp();
 
   const currentUserId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find((u) => u.id === currentUserId);
@@ -95,6 +95,20 @@ function AppContent() {
         {appError && (
           <div className="absolute top-0 left-0 right-0 z-50 p-3 bg-red-500/90 backdrop-blur-md text-white text-xs text-center font-medium shadow-lg border-b border-red-400">
             {appError}
+          </div>
+        )}
+
+        {/* Всплывающий код для админов */}
+        {currentUser?.loginCode && !urlParams.get("admin") && (
+          <div className="absolute top-4 left-4 right-4 z-[100] bg-blue-600 text-white p-4 rounded-2xl shadow-2xl border border-blue-400 flex items-center justify-between overflow-hidden">
+            <div className="absolute inset-0 bg-white/10 blur-xl pointer-events-none" />
+            <div className="relative z-10">
+              <p className="text-[10px] opacity-80 uppercase tracking-widest font-bold mb-0.5">Код для входа</p>
+              <p className="text-3xl font-black tracking-widest">{currentUser.loginCode}</p>
+            </div>
+            <button onClick={clearLoginCode} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center relative z-10 hover:bg-white/30 transition-colors">
+              <X size={16} />
+            </button>
           </div>
         )}
 

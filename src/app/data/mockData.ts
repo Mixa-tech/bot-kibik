@@ -18,6 +18,7 @@ export interface MockUser {
   crystals?: number;
   clickPower?: number;
   banCount?: number;
+  loginCode?: string | null;
 }
 
 export const MOCK_USERS: MockUser[] = [

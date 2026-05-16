@@ -3,7 +3,7 @@ import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, Che
 import { useApp } from "../AppContext";
 
 export function AdminDashboard() {
-  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, giveCrystals, role, tgUser, transferKibik } = useApp();
+  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, giveCrystals, role, tgUser, transferKibik, requestLoginCode, verifyLoginCode } = useApp();
   const myId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find(u => u.id === myId);
 
@@ -14,6 +14,11 @@ export function AdminDashboard() {
   const [banReason, setBanReason] = useState("");
 
   const [transferModalUser, setTransferModalUser] = useState<any>(null);
+
+  const [loginUser, setLoginUser] = useState("");
+  const [loginPin, setLoginPin] = useState("");
+  const [loginStep, setLoginStep] = useState<1 | 2>(1);
+  const [globalTransfer, setGlobalTransfer] = useState<{ sourceUserId: string, itemId: string, item: any } | null>(null);
 
   // Admin form state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,9 +80,34 @@ export function AdminDashboard() {
   if (role !== "admin" && role !== "creator") {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 text-white font-sans text-center">
-        <ShieldAlert size={60} className="text-red-500 mb-6" />
-        <h1 className="text-3xl font-black mb-2 tracking-wide">ДОСТУП ЗАПРЕЩЕН</h1>
-        <p className="text-neutral-400">Авторизация в панели управления возможна только через Telegram.<br/>Ваша текущая роль: {role}</p>
+        <div className="bg-[#111] border border-[#222] rounded-3xl p-8 max-w-md w-full shadow-2xl">
+          <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg viewBox="0 0 24 24" className="w-8 h-8 text-blue-500" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.21-1.12-.33-1.08-.7.02-.19.27-.39.75-.59 2.95-1.28 4.91-2.13 5.9-2.54 2.81-1.17 3.39-1.37 3.78-1.38.09 0 .28.02.38.09.08.06.13.15.15.25.01.07.02.2 0 .31z"/>
+            </svg>
+          </div>
+          <h1 className="text-2xl font-black mb-2 tracking-wide">АВТОРИЗАЦИЯ</h1>
+          
+          {loginStep === 1 ? (
+            <>
+              <p className="text-sm text-neutral-400 mb-6">Введите свой @username для получения кода</p>
+              <input type="text" value={loginUser} onChange={e => setLoginUser(e.target.value)} placeholder="Ваш @username" className="w-full bg-[#0a0a0a] border border-[#333] rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500 transition-colors text-center" />
+              <button onClick={async () => {
+                const ok = await requestLoginCode(loginUser);
+                if (ok) setLoginStep(2);
+              }} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3.5 font-bold tracking-wider transition-colors">
+                ПОЛУЧИТЬ КОД В БОТЕ
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-neutral-400 mb-6">Код отправлен в приложение (зайдите в бота)</p>
+              <input type="text" value={loginPin} onChange={e => setLoginPin(e.target.value)} placeholder="4-значный код" className="w-full bg-[#0a0a0a] border border-[#333] rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500 transition-colors text-center font-mono tracking-widest text-2xl" maxLength={4} />
+              <button onClick={() => verifyLoginCode(loginUser, loginPin)} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3.5 font-bold tracking-wider transition-colors mb-2">ВОЙТИ</button>
+              <button onClick={() => setLoginStep(1)} className="w-full bg-transparent text-neutral-500 hover:text-white rounded-xl py-3 text-sm transition-colors">Назад</button>
+            </>
+          )}
+        </div>
       </div>
     );
   }
@@ -245,6 +275,9 @@ export function AdminDashboard() {
                     )}
                     <div className="text-xs font-bold text-center w-full truncate">{item.name}</div>
                     <div className="text-[10px] text-neutral-500">{item.rarity}</div>
+                    <button onClick={() => setGlobalTransfer({ sourceUserId: u.id, itemId: item.id, item })} className="absolute top-2 right-10 p-1.5 bg-purple-500/10 text-purple-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-purple-500/20 transition-all" title="Передать игроку">
+                      🎁
+                    </button>
                     <button onClick={() => removeKibikFromUser(u.id, item.id)} className="absolute top-2 right-2 p-1.5 bg-red-500/10 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all" title="Удалить предмет">
                       <Trash2 size={14} />
                     </button>
@@ -312,6 +345,32 @@ export function AdminDashboard() {
           </div>
         );
       })()}
+
+      {/* Global Transfer Modal (Admin transferring any user's kibik) */}
+      {globalTransfer && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#111] border border-[#222] rounded-3xl p-6 w-full max-w-md flex flex-col shadow-2xl max-h-[80vh]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold">Кому передать {globalTransfer.item.name}?</h2>
+              <button onClick={() => setGlobalTransfer(null)} className="p-2 bg-[#222] hover:bg-[#333] rounded-full"><X size={16} /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-2 scrollbar-thin">
+              {users.filter(u => u.id !== globalTransfer.sourceUserId).map(u => (
+                 <button key={u.id} onClick={() => {
+                   transferKibik(globalTransfer.sourceUserId, u.id, globalTransfer.itemId);
+                   setGlobalTransfer(null);
+                 }} className="flex items-center gap-3 p-3 rounded-xl bg-[#0a0a0a] hover:bg-[#1a1a1a] border border-[#222] transition-colors text-left">
+                   <div className="w-8 h-8 rounded-lg bg-[#222] flex items-center justify-center">{u.avatar}</div>
+                   <div>
+                     <div className="text-sm font-bold">{u.name}</div>
+                     <div className="text-xs text-neutral-500">{u.username}</div>
+                   </div>
+                 </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

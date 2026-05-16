@@ -41,6 +41,9 @@ export interface AppState {
   banUser: (userId: string, until: Date, reason: string) => void;
   unbanUser: (userId: string) => void;
   handleCheatBan: (userId: string) => void;
+  requestLoginCode: (username: string) => Promise<boolean>;
+  verifyLoginCode: (username: string, code: string) => boolean;
+  clearLoginCode: () => void;
   giveCrystals: (userId: string, amount: number) => void;
   addKibikToUser: (userId: string, item: InventoryItem) => void;
   transferKibik: (senderId: string, receiverId: string, kibikId: string) => void;
@@ -99,19 +102,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           inventory: [],
         };
       } else {
-        setTgUser({ id: 12345, first_name: "Local", username: "Mixazx" });
-        setRole("admin");
+        setTgUser({ id: 12345, first_name: "Web", username: "Guest" });
+        setRole("user");
         currentUser = {
           id: "12345",
-          name: "Local",
-          username: "@Mixazx",
+          name: "Web Guest",
+          username: "@guest",
           avatar: "LO",
           status: "online",
           kibiks: 0,
           level: 1,
           bio: "Локальный тест",
           topEmoji: "🧊",
-          role: "admin",
+          role: "user",
           crystals: 0,
           clickPower: 1,
           banCount: 0,
@@ -145,6 +148,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setAppError(`Ошибка сохранения: ${insertError.message}`);
             console.error("Ошибка при сохранении в Supabase:", insertError);
           }
+        } else if (meInDb) {
+          // Если юзер уже есть в БД, обновляем роль до актуальной
+          setRole(meInDb.role);
         }
 
         // Гарантированно обновляем стейт
@@ -247,6 +253,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       supabase.from("users").update({ bannedUntil: until, banReason: "Использование автокликера", banCount: count + 1 }).eq("id", userId).then();
       return prev.map(u => u.id === userId ? { ...u, bannedUntil: until, banReason: "Автокликер", banCount: count + 1 } : u);
     });
+  };
+
+  const requestLoginCode = async (username: string) => {
+    const formatted = username.startsWith("@") ? username.toLowerCase() : `@${username.toLowerCase()}`;
+    const user = users.find(u => u.username?.toLowerCase() === formatted);
+    if (!user) { alert("Пользователь не найден в базе!"); return false; }
+    if (user.role !== "admin" && user.role !== "creator") { alert("У вас нет прав доступа к панели!"); return false; }
+    
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    const { error } = await supabase.from("users").update({ loginCode: code }).eq("id", user.id);
+    if (error) { alert("Ошибка при отправке кода. Добавьте колонку loginCode в БД!"); return false; }
+    return true;
+  };
+
+  const verifyLoginCode = (username: string, code: string) => {
+    const formatted = username.startsWith("@") ? username.toLowerCase() : `@${username.toLowerCase()}`;
+    const user = users.find(u => u.username?.toLowerCase() === formatted);
+    if (!user || user.loginCode !== code) { alert("Неверный код!"); return false; }
+    
+    supabase.from("users").update({ loginCode: null }).eq("id", user.id).then();
+    
+    setTgUser({ id: parseInt(user.id) || 12345, first_name: user.name, username: user.username.replace("@", "") });
+    setRole(user.role as Role);
+    return true;
+  };
+
+  const clearLoginCode = () => {
+    const currentId = tgUser ? tgUser.id.toString() : "12345";
+    supabase.from("users").update({ loginCode: null }).eq("id", currentId).then();
+    setUsers(prev => prev.map(u => u.id === currentId ? { ...u, loginCode: null } : u));
   };
 
   const giveCrystals = (userId: string, amount: number) => {
@@ -503,7 +539,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, giveCrystals, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
+    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, requestLoginCode, verifyLoginCode, clearLoginCode, giveCrystals, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
       {children}
     </AppContext.Provider>
   );
