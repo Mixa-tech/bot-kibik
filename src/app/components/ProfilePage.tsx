@@ -154,6 +154,17 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
         </div>
       </motion.div>
 
+      {/* Trades Section */}
+      {(pendingIncoming.length > 0 || pendingOutgoing.length > 0) && (
+        <div className="flex flex-col gap-3 mt-2 mb-2">
+          {pendingIncoming.map(trade => {
+            const sender = users.find(u => u.id === trade.sender_id);
+            return (
+              <div key={trade.id} className="p-4 rounded-2xl flex flex-col gap-3 border border-blue-500/30" style={{ background: isDark ? "rgba(59,130,246,0.1)" : "rgba(59,130,246,0.05)" }}>
+                <div className="flex justify-between items-center text-sm">
+                  <span style={{ color: c.primary }} className="font-medium">Входящий трейд от {sender?.name || "Неизвестного"}</span>
+                </div>
+                
                 {/* User Inventory Preview */}
                 <div className="w-full mt-3 flex flex-col gap-2">
                   <p className="text-[10px] uppercase tracking-widest text-left px-1" style={{ color: c.muted }}>Инвентарь ({selectedUser.inventory?.length || 0})</p>
@@ -172,17 +183,6 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
                       <div className="text-xs px-1" style={{ color: c.muted }}>Пусто</div>
                     )}
                   </div>
-                </div>
-                
-      {/* Trades Section */}
-      {(pendingIncoming.length > 0 || pendingOutgoing.length > 0) && (
-        <div className="flex flex-col gap-3 mt-2 mb-2">
-          {pendingIncoming.map(trade => {
-            const sender = users.find(u => u.id === trade.sender_id);
-            return (
-              <div key={trade.id} className="p-4 rounded-2xl flex flex-col gap-3 border border-blue-500/30" style={{ background: isDark ? "rgba(59,130,246,0.1)" : "rgba(59,130,246,0.05)" }}>
-                <div className="flex justify-between items-center text-sm">
-                  <span style={{ color: c.primary }} className="font-medium">Входящий трейд от {sender?.name || "Неизвестного"}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-xl" style={glass(isDark, 0.05)}>
                   <div className="flex flex-col items-center flex-1">

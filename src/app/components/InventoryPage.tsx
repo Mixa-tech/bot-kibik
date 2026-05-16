@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Package2, Filter, X } from "lucide-react";
 import { useTheme, glass, tc } from "./ThemeContext";
+import { useApp } from "../AppContext";
 import type { InventoryItem } from "./HomePage";
 
 interface InventoryPageProps {
@@ -35,6 +36,11 @@ export function InventoryPage({ inventory }: InventoryPageProps) {
   const c = tc(isDark);
   const [filter, setFilter] = useState<FilterType>("all");
   const [selected, setSelected] = useState<InventoryItem | null>(null);
+  const [isSelling, setIsSelling] = useState(false);
+  const [sellPrice, setSellPrice] = useState("");
+
+  const { tgUser, sellKibik } = useApp();
+  const myId = tgUser ? tgUser.id.toString() : "12345";
 
   const filtered = inventory
     .filter((i) => filter === "all" || i.rarity === filter)
@@ -169,9 +175,10 @@ export function InventoryPage({ inventory }: InventoryPageProps) {
               onClick={() => setSelected(null)}
             />
             <motion.div
-              initial={{ opacity: 0, y: 60, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 60, scale: 0.95 }}
+              initial={{ opacity: 0, y: 80 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 80 }}
+              transition={{ type: "spring", stiffness: 350, damping: 25 }}
               className="fixed bottom-20 left-4 right-4 z-50 rounded-3xl p-6"
               style={{
                 background: isDark ? "rgba(12,12,20,0.95)" : "rgba(250,250,255,0.95)",
@@ -181,7 +188,7 @@ export function InventoryPage({ inventory }: InventoryPageProps) {
               }}
             >
               <button
-                onClick={() => setSelected(null)}
+                onClick={() => { setSelected(null); setIsSelling(false); setSellPrice(""); }}
                 className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center"
                 style={glass(isDark, 0.1)}
               >
@@ -196,9 +203,39 @@ export function InventoryPage({ inventory }: InventoryPageProps) {
                 >
                   {rarityStyles[selected.rarity].label}
                 </div>
-                <div className="text-xs" style={{ color: c.muted }}>
+                <div className="text-xs mb-6" style={{ color: c.muted }}>
                   Код: {selected.code} · {selected.addedAt.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })}
                 </div>
+
+                {isSelling ? (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex flex-col gap-3">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={sellPrice}
+                        onChange={(e) => setSellPrice(e.target.value)}
+                        placeholder="Цена (до 10 000 000)"
+                        max="10000000"
+                        className="w-full rounded-xl px-4 py-3 outline-none text-center bg-transparent border text-sm"
+                        style={{ borderColor: rarityStyles[selected.rarity].border, color: c.primary }}
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 opacity-50">💎</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const p = parseInt(sellPrice);
+                        if (p > 0 && p <= 10000000) { sellKibik(myId, selected.id, p); setSelected(null); setIsSelling(false); setSellPrice(""); }
+                      }}
+                      className="w-full py-3 rounded-xl font-bold text-white transition-opacity disabled:opacity-50"
+                      style={{ background: "#3b82f6", boxShadow: "0 4px 20px rgba(59,130,246,0.3)" }}
+                      disabled={!parseInt(sellPrice) || parseInt(sellPrice) <= 0 || parseInt(sellPrice) > 10000000}
+                    >
+                      Выставить на продажу
+                    </button>
+                  </motion.div>
+                ) : (
+                  <button onClick={() => setIsSelling(true)} className="w-full py-3 rounded-xl font-medium transition-colors" style={{ background: "rgba(59,130,246,0.15)", color: "#60a5fa" }}>Продать на бирже</button>
+                )}
               </div>
             </motion.div>
           </>

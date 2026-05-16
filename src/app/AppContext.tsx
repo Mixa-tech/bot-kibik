@@ -22,6 +22,13 @@ export interface Trade {
   status: "pending" | "accepted" | "declined";
 }
 
+export interface MarketListing {
+  id: string;
+  seller_id: string;
+  item: InventoryItem;
+  price: number;
+}
+
 export interface AppState {
   tgUser: TelegramUser | null;
   role: Role;
@@ -38,6 +45,10 @@ export interface AppState {
   removeKibikFromUser: (userId: string, kibikId: string) => void;
   appError: string | null;
   trades: Trade[];
+  marketListings: MarketListing[];
+  sellKibik: (userId: string, kibikId: string, price: number) => void;
+  buyKibik: (buyerId: string, listingId: string) => void;
+  cancelListing: (sellerId: string, listingId: string) => void;
   syncClicker: (userId: string, crystals: number, clickPower: number) => void;
   createTrade: (receiverId: string, offer: InventoryItem, request: InventoryItem) => void;
   acceptTrade: (tradeId: string) => void;
@@ -53,6 +64,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [globalKibiks, setGlobalKibiks] = useState<Record<string, Omit<InventoryItem, "id" | "addedAt">>>({});
   const [appError, setAppError] = useState<string | null>(null);
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [marketListings, setMarketListings] = useState<MarketListing[]>([]);
 
   useEffect(() => {
     const initApp = async () => {
@@ -153,6 +165,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } else if (dbTrades) {
           setTrades(dbTrades);
         }
+
+        // 6. Скачиваем лоты с биржи
+        const { data: dbMarket, error: marketError } = await supabase.from("market").select("*");
+        if (marketError) console.error("Ошибка биржи:", marketError);
+        else if (dbMarket) setMarketListings(dbMarket);
+
       } catch (err) {
         setAppError(`Ошибка БД: ${err.message || String(err)}`);
         console.error("Критическая ошибка Supabase:", err);
@@ -329,6 +347,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTrades(prev => prev.map(t => t.id === tradeId ? { ...t, status: "declined" } : t));
   };
 
+  const sellKibik = async (userId: string, kibikId: string, price: number) => {
+    if (price <= 0 || price > 10000000) return;
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    const kibik = user.inventory?.find(i => i.id === kibikId);
+    if (!kibik) return;
+
+    const newInv = user.inventory!.filter(i => i.id !== kibikId);
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, inventory: newInv, kibiks: newInv.length } : u));
+    
+    await supabase.from("users").update({ inventory: newInv, kibiks: newInv.length }).eq("id", userId);
+    await supabase.from("market").insert({ seller_id: userId, item: kibik, price });
+  };
+
+  const buyKibik = async (buyerId: string, listingId: string) => {
+    const listing = marketListings.find(l => l.id === listingId);
+    if (!listing) return;
+    const buyer = users.find(u => u.id === buyerId);
+    if (!buyer || (buyer.crystals || 0) < listing.price) return; // Недостаточно кристаллов
+
+    const seller = users.find(u => u.id === listing.seller_id);
+    
+    const buyerCrystals = (buyer.crystals || 0) - listing.price;
+    const buyerInv = [...(buyer.inventory || []), { ...listing.item, addedAt: new Date() }];
+    
+    setUsers(prev => prev.map(u => {
+      if (u.id === buyerId) return { ...u, crystals: buyerCrystals, inventory: buyerInv, kibiks: buyerInv.length };
+      if (seller && u.id === seller.id) return { ...u, crystals: (u.crystals || 0) + listing.price };
+      return u;
+    }));
+    
+    await supabase.from("users").update({ crystals: buyerCrystals, inventory: buyerInv, kibiks: buyerInv.length }).eq("id", buyerId);
+    if (seller) await supabase.from("users").update({ crystals: (seller.crystals || 0) + listing.price }).eq("id", seller.id);
+    await supabase.from("market").delete().eq("id", listingId);
+  };
+
+  const cancelListing = async (sellerId: string, listingId: string) => {
+    const listing = marketListings.find(l => l.id === listingId);
+    if (!listing || listing.seller_id !== sellerId) return;
+    const seller = users.find(u => u.id === sellerId);
+    if (!seller) return;
+    
+    const newInv = [...(seller.inventory || []), listing.item];
+    setUsers(prev => prev.map(u => u.id === sellerId ? { ...u, inventory: newInv, kibiks: newInv.length } : u));
+    await supabase.from("users").update({ inventory: newInv, kibiks: newInv.length }).eq("id", sellerId);
+    await supabase.from("market").delete().eq("id", listingId);
+  };
+
   // Эффект для прослушивания базы данных в реальном времени
   useEffect(() => {
     const channel = supabase.channel('db-changes')
@@ -372,13 +438,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return prev;
         });
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'market' }, (payload) => {
+        setMarketListings((prev) => {
+          if (payload.eventType === 'INSERT') return [payload.new as any, ...prev];
+          if (payload.eventType === 'DELETE') return prev.filter((t) => t.id !== payload.old.id);
+          return prev;
+        });
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, []);
 
   return (
-    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, addKibikToUser, removeKibikFromUser, appError, trades, syncClicker, createTrade, acceptTrade, declineTrade }}>
+    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, addKibikToUser, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
       {children}
     </AppContext.Provider>
   );

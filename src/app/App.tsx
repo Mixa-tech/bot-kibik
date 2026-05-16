@@ -1,20 +1,22 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Home, Package, User, Zap, ShieldAlert } from "lucide-react";
+import { Home, Package, User, Zap, ShieldAlert, Store } from "lucide-react";
 import { ThemeContext } from "./components/ThemeContext";
 import { HomePage } from "./components/HomePage";
 import { InventoryPage } from "./components/InventoryPage";
 import { ProfilePage } from "./components/ProfilePage";
 import { ClickerPage } from "./components/ClickerPage";
+import { MarketPage } from "./components/MarketPage";
 import { AdminDashboard } from "./components/AdminDashboard";
 import type { InventoryItem } from "./components/HomePage";
 import { AppProvider, useApp } from "./AppContext";
 
-type Tab = "home" | "inventory" | "clicker" | "profile";
+type Tab = "home" | "inventory" | "market" | "clicker" | "profile";
 
 const TABS = [
   { key: "home" as Tab, label: "Главная", Icon: Home },
   { key: "inventory" as Tab, label: "Инвентарь", Icon: Package },
+  { key: "market" as Tab, label: "Биржа", Icon: Store },
   { key: "clicker" as Tab, label: "Кликер", Icon: Zap },
   { key: "profile" as Tab, label: "Профиль", Icon: User },
 ];
@@ -124,6 +126,7 @@ function AppContent() {
             >
               {activeTab === "home"      && <HomePage onAddItem={addItem} inventory={inventory} />}
               {activeTab === "inventory" && <InventoryPage inventory={inventory} />}
+              {activeTab === "market"    && <MarketPage />}
               {activeTab === "clicker"   && <ClickerPage />}
               {activeTab === "profile"   && <ProfilePage inventory={inventory} myName={myName} />}
             </motion.div>
