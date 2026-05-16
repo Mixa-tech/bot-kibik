@@ -104,6 +104,27 @@ function AppContent() {
     );
   }
 
+  // Проверка на тех. работы (ПОСЛЕ входа, чтобы админ мог авторизоваться с ПК)
+  const isGlobalMaintenance = !!globalKibiks["SYSTEM_MAINTENANCE"];
+  const isMixazx = tgUser?.username?.toLowerCase() === "mixazx" || currentUser?.username?.toLowerCase() === "@mixazx";
+  const showMaintenanceScreen = !isMixazx && (isGlobalMaintenance || currentUser?.showMaintenance);
+
+  if (showMaintenanceScreen) {
+    return (
+      <div className="size-full fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 text-center" style={{ background: "#0a0a0a", color: "#ffffff" }}>
+        <ShieldAlert size={80} className="mb-6 text-white animate-pulse" />
+        <h1 className="text-3xl font-black mb-4 tracking-widest leading-tight">ТЕХНИЧЕСКИЕ РАБОТЫ</h1>
+        <p className="text-sm text-neutral-400 mb-6 font-medium leading-relaxed">
+          Ожидание версии 0.5 beta.<br/>
+          Крупное исправление кликера и<br/>добавление новых функций.
+        </p>
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-5 w-full max-w-sm">
+          <p className="text-sm text-neutral-300">Ожидайте новых новостей!</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ThemeContext.Provider value={{ isDark }}>
       <div

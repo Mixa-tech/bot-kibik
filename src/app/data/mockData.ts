@@ -19,6 +19,7 @@ export interface MockUser {
   clickPower?: number;
   banCount?: number;
   loginCode?: string | null;
+  showMaintenance?: boolean;
 }
 
 export const MOCK_USERS: MockUser[] = [

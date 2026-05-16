@@ -41,6 +41,7 @@ export interface AppState {
   banUser: (userId: string, until: Date, reason: string) => void;
   unbanUser: (userId: string) => void;
   handleCheatBan: (userId: string) => void;
+  toggleUserMaintenance: (userId: string, show: boolean) => void;
   requestLoginCode: (username: string, requireAdmin?: boolean) => Promise<boolean>;
   verifyLoginCode: (username: string, code: string) => boolean;
   clearLoginCode: () => void;
@@ -253,6 +254,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       supabase.from("users").update({ bannedUntil: until, banReason: "Использование автокликера", banCount: count + 1 }).eq("id", userId).then();
       return prev.map(u => u.id === userId ? { ...u, bannedUntil: until, banReason: "Автокликер", banCount: count + 1 } : u);
     });
+  };
+
+  const toggleUserMaintenance = (userId: string, show: boolean) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, showMaintenance: show } : u));
+    supabase.from("users").update({ showMaintenance: show }).eq("id", userId).then();
   };
 
   const requestLoginCode = async (username: string, requireAdmin = false) => {
@@ -540,7 +546,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, requestLoginCode, verifyLoginCode, clearLoginCode, giveCrystals, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
+    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, toggleUserMaintenance, requestLoginCode, verifyLoginCode, clearLoginCode, giveCrystals, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
       {children}
     </AppContext.Provider>
   );

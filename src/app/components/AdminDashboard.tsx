@@ -3,7 +3,7 @@ import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, Che
 import { useApp } from "../AppContext";
 
 export function AdminDashboard() {
-  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, giveCrystals, role, tgUser, transferKibik, requestLoginCode, verifyLoginCode } = useApp();
+  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, giveCrystals, role, tgUser, transferKibik, requestLoginCode, verifyLoginCode, toggleUserMaintenance } = useApp();
   const myId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find(u => u.id === myId);
 
@@ -258,6 +258,8 @@ export function AdminDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button onClick={() => toggleUserMaintenance(u.id, !u.showMaintenance)} className={`border text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${u.showMaintenance ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20' : 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20 hover:bg-neutral-500/20'}`} title="Экран тех. работ">{u.showMaintenance ? "Снять тех.блок" : "Тех.блок"}</button>
+
                       <button onClick={() => setTransferModalUser(u)} className="bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Передать кибик">🎁</button>
 
                       <button onClick={() => {
