@@ -18,6 +18,7 @@ export function AdminDashboard() {
   const [loginUser, setLoginUser] = useState("");
   const [loginPin, setLoginPin] = useState("");
   const [loginStep, setLoginStep] = useState<1 | 2>(1);
+  const [isAuth, setIsAuth] = useState(false);
   const [globalTransfer, setGlobalTransfer] = useState<{ sourceUserId: string, itemId: string, item: any } | null>(null);
 
   // Admin form state
@@ -77,7 +78,7 @@ export function AdminDashboard() {
     setTimeout(() => setStatus("idle"), 2000);
   };
 
-  if (role !== "admin" && role !== "creator") {
+  if (!isAuth) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 text-white font-sans text-center">
         <div className="bg-[#111] border border-[#222] rounded-3xl p-8 max-w-md w-full shadow-2xl">
@@ -103,7 +104,11 @@ export function AdminDashboard() {
             <>
               <p className="text-sm text-neutral-400 mb-6">Код отправлен в приложение (зайдите в бота)</p>
               <input type="text" value={loginPin} onChange={e => setLoginPin(e.target.value)} placeholder="4-значный код" className="w-full bg-[#0a0a0a] border border-[#333] rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500 transition-colors text-center font-mono tracking-widest text-2xl" maxLength={4} />
-              <button onClick={() => verifyLoginCode(loginUser, loginPin)} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3.5 font-bold tracking-wider transition-colors mb-2">ВОЙТИ</button>
+              <button onClick={() => {
+                if (verifyLoginCode(loginUser, loginPin)) {
+                  setIsAuth(true);
+                }
+              }} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3.5 font-bold tracking-wider transition-colors mb-2">ВОЙТИ</button>
               <button onClick={() => setLoginStep(1)} className="w-full bg-transparent text-neutral-500 hover:text-white rounded-xl py-3 text-sm transition-colors">Назад</button>
             </>
           )}
