@@ -41,6 +41,7 @@ export interface AppState {
   banUser: (userId: string, until: Date, reason: string) => void;
   unbanUser: (userId: string) => void;
   handleCheatBan: (userId: string) => void;
+  giveCrystals: (userId: string, amount: number) => void;
   addKibikToUser: (userId: string, item: InventoryItem) => void;
   removeKibikFromUser: (userId: string, kibikId: string) => void;
   appError: string | null;
@@ -247,6 +248,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const giveCrystals = (userId: string, amount: number) => {
+    setUsers((prev) => {
+      const user = prev.find(u => u.id === userId);
+      if (!user) return prev;
+      
+      const newCrystals = (user.crystals || 0) + amount;
+      
+      supabase.from("users").update({ crystals: newCrystals }).eq("id", userId)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Ошибка выдачи кристаллов:", error);
+            setAppError(`Ошибка: ${error.message}`);
+          }
+        }).catch(err => setAppError(`Сбой сети: ${err.message || String(err)}`));
+
+      return prev.map((u) => 
+        u.id === userId ? { ...u, crystals: newCrystals } : u
+      );
+    });
+  };
+
   const syncClicker = (userId: string, crystals: number, clickPower: number) => {
     setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, crystals, clickPower } : u));
     supabase.from("users").update({ crystals, clickPower }).eq("id", userId).then(({ error }) => {
@@ -442,6 +464,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMarketListings((prev) => {
           if (payload.eventType === 'INSERT') return [payload.new as any, ...prev];
           if (payload.eventType === 'DELETE') return prev.filter((t) => t.id !== payload.old.id);
+          if (payload.eventType === 'UPDATE') return prev.map((t) => (t.id === payload.new.id ? (payload.new as any) : t));
           return prev;
         });
       })
@@ -451,7 +474,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, addKibikToUser, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
+    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, giveCrystals, addKibikToUser, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
       {children}
     </AppContext.Provider>
   );

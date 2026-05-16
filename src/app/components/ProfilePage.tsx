@@ -165,25 +165,6 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
                   <span style={{ color: c.primary }} className="font-medium">Входящий трейд от {sender?.name || "Неизвестного"}</span>
                 </div>
                 
-                {/* User Inventory Preview */}
-                <div className="w-full mt-3 flex flex-col gap-2">
-                  <p className="text-[10px] uppercase tracking-widest text-left px-1" style={{ color: c.muted }}>Инвентарь ({selectedUser.inventory?.length || 0})</p>
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
-                    {selectedUser.inventory?.map(item => (
-                      <div key={item.id} className="shrink-0 flex flex-col items-center justify-center p-2 rounded-xl border" style={{ ...glass(isDark, 0.05), width: 68, height: 72 }}>
-                        {/^(https?|data|blob):/.test(item.emoji) ? (
-                          <img src={item.emoji} alt={item.name} className="w-6 h-6 object-cover rounded mb-1" />
-                        ) : (
-                          <span className="text-2xl mb-1 leading-none">{item.emoji}</span>
-                        )}
-                        <span className="text-[9px] text-center w-full truncate leading-tight" style={{ color: c.primary }}>{item.name}</span>
-                      </div>
-                    ))}
-                    {(!selectedUser.inventory || selectedUser.inventory.length === 0) && (
-                      <div className="text-xs px-1" style={{ color: c.muted }}>Пусто</div>
-                    )}
-                  </div>
-                </div>
                 <div className="flex items-center justify-between p-3 rounded-xl" style={glass(isDark, 0.05)}>
                   <div className="flex flex-col items-center flex-1">
                     <span className="text-2xl mb-1">{trade.offer_item.emoji}</span>
@@ -397,6 +378,17 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
                   </div>
                 </div>
                 
+                {/* User trade button */}
+                {selectedUser.id !== myId && (
+                  <button
+                    onClick={() => { setTradeOffer(null); setTradeRequest(null); setShowTradeModal(true); }}
+                    className="w-full mt-3 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2"
+                    style={{ background: "rgba(59, 130, 246, 0.15)", color: "#60a5fa" }}
+                  >
+                    <ArrowRightLeft size={16} /> Предложить обмен кибиками
+                  </button>
+                )}
+
                 {/* Admin Actions */}
                 {myRole === "admin" && selectedUser.role !== "admin" && (
                   <div className="w-full mt-2 flex flex-col gap-2 pt-4" style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}` }}>

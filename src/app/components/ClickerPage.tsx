@@ -18,27 +18,33 @@ export function ClickerPage() {
   const myId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find(u => u.id === myId);
   
-  const [localCrystals, setLocalCrystals] = useState(currentUser?.crystals || 0);
-  const [localPower, setLocalPower] = useState(currentUser?.clickPower || 1);
+  const dbCrystals = currentUser?.crystals || 0;
+  const currentPower = currentUser?.clickPower || 1;
+  
+  const [uncommitted, setUncommitted] = useState(0);
+  const displayCrystals = dbCrystals + uncommitted;
+  
   const [floatingTexts, setFloatingTexts] = useState<{ id: number; x: number; y: number; val: number }[]>([]);
 
   const clickTimes = useRef<number[]>([]);
-  const pendingSave = useRef(false);
 
   const level = Math.max(1, Math.floor((currentUser?.inventory?.length || 0) / 3) + 1);
   const MAX_CRYSTALS = 500000 + ((level - 1) * 100000);
   const MAX_POWER = 50;
 
-  // Синхронизация с базой каждые 2 секунды (чтобы не спамить запросами)
+  // Интеллектуальная синхронизация: объединяем локальные клики с обновлениями извне (Realtime)
   useEffect(() => {
     const interval = setInterval(() => {
-      if (pendingSave.current) {
-        syncClicker(myId, localCrystals, localPower);
-        pendingSave.current = false;
-      }
+      setUncommitted(prev => {
+        if (prev !== 0) {
+          syncClicker(myId, dbCrystals + prev, currentPower);
+          return 0; // Сбрасываем локальные клики после отправки
+        }
+        return prev;
+      });
     }, 2000);
     return () => clearInterval(interval);
-  }, [localCrystals, localPower, myId]);
+  }, [dbCrystals, currentPower, myId, syncClicker]);
 
   const handleTap = (e: React.TouchEvent | React.MouseEvent) => {
     const now = Date.now();
@@ -55,11 +61,10 @@ export function ClickerPage() {
     }
     // ---------------
 
-    if (localCrystals >= MAX_CRYSTALS) return;
+    if (displayCrystals >= MAX_CRYSTALS) return;
 
-    const amount = Math.min(localPower, MAX_CRYSTALS - localCrystals);
-    setLocalCrystals(prev => prev + amount);
-    pendingSave.current = true;
+    const amount = Math.min(currentPower, MAX_CRYSTALS - displayCrystals);
+    setUncommitted(prev => prev + amount);
 
     // Анимация вылетающих циферок
     let clientX = 0, clientY = 0;
@@ -79,13 +84,17 @@ export function ClickerPage() {
   };
 
   const handleUpgrade = () => {
-    if (localPower >= MAX_POWER) return;
-    const cost = getUpgradeCost(localPower);
-    if (localCrystals >= cost) {
-      setLocalCrystals(prev => prev - cost);
-      setLocalPower(prev => prev + 1);
-      pendingSave.current = true;
-    }
+    if (currentPower >= MAX_POWER) return;
+    const cost = getUpgradeCost(currentPower);
+    
+    setUncommitted(prev => {
+      const currentTotal = dbCrystals + prev;
+      if (currentTotal >= cost) {
+        syncClicker(myId, currentTotal - cost, currentPower + 1);
+        return 0;
+      }
+      return prev;
+    });
   };
 
   return (
@@ -93,12 +102,12 @@ export function ClickerPage() {
       {/* Header */}
       <div className="flex flex-col items-center pt-6 gap-2 relative z-10">
         <h2 className="text-white text-5xl font-black tracking-tight flex items-center gap-2">
-          {localCrystals.toLocaleString()}
+          {displayCrystals.toLocaleString()}
         </h2>
         <div className="w-48 h-2 bg-white/10 rounded-full overflow-hidden mt-2">
-          <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${(localCrystals / MAX_CRYSTALS) * 100}%` }} />
+          <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${(displayCrystals / MAX_CRYSTALS) * 100}%` }} />
         </div>
-        <span className="text-xs text-white/50">{localCrystals.toLocaleString()} / {MAX_CRYSTALS.toLocaleString()}</span>
+        <span className="text-xs text-white/50">{displayCrystals.toLocaleString()} / {MAX_CRYSTALS.toLocaleString()}</span>
       </div>
 
       {/* Clicker Area */}
@@ -140,14 +149,14 @@ export function ClickerPage() {
       {/* Upgrades */}
       <div className="mt-auto pb-4 relative z-10">
         <button
-          disabled={localPower >= MAX_POWER || localCrystals < getUpgradeCost(localPower)}
+          disabled={currentPower >= MAX_POWER || displayCrystals < getUpgradeCost(currentPower)}
           onClick={handleUpgrade}
           className="w-full py-4 rounded-2xl flex flex-col items-center justify-center disabled:opacity-50 disabled:grayscale"
           style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(37,99,235,0.1))", border: "1px solid rgba(59,130,246,0.3)" }}
         >
-          <span className="text-white font-bold flex items-center gap-2"><Zap size={16} className="text-blue-400" /> Прокачать силу клика (Текущая: {localPower})</span>
-          {localPower < MAX_POWER && <span className="text-xs text-blue-300 mt-1">Цена: {getUpgradeCost(localPower).toLocaleString()} 💎</span>}
-          {localPower >= MAX_POWER && <span className="text-xs text-yellow-400 mt-1">Максимальный уровень!</span>}
+          <span className="text-white font-bold flex items-center gap-2"><Zap size={16} className="text-blue-400" /> Прокачать силу клика (Текущая: {currentPower})</span>
+          {currentPower < MAX_POWER && <span className="text-xs text-blue-300 mt-1">Цена: {getUpgradeCost(currentPower).toLocaleString()} 💎</span>}
+          {currentPower >= MAX_POWER && <span className="text-xs text-yellow-400 mt-1">Максимальный уровень!</span>}
         </button>
       </div>
     </div>

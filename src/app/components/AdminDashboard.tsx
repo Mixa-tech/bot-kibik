@@ -3,7 +3,7 @@ import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, Che
 import { useApp } from "../AppContext";
 
 export function AdminDashboard() {
-  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser } = useApp();
+  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, giveCrystals } = useApp();
   const [pin, setPin] = useState("");
   const [auth, setAuth] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -204,6 +204,15 @@ export function AdminDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button onClick={() => {
+                        const amountStr = window.prompt(`Выдать кристаллы игроку ${u.name}?\nВведите количество (можно с минусом, чтобы забрать):`);
+                        if (!amountStr) return;
+                        const amount = parseInt(amountStr, 10);
+                        if (!isNaN(amount) && amount !== 0) {
+                          giveCrystals(u.id, amount);
+                        }
+                      }} className="bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 hover:bg-cyan-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Выдать кристаллы">+💎</button>
+
                       <button onClick={() => setSelectedUser(u)} className="bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Инвентарь</button>
                       {isBanned ? (
                         <button onClick={() => unbanUser(u.id)} className="bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Разбан</button>
