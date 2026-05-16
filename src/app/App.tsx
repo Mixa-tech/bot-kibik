@@ -107,7 +107,7 @@ function AppContent() {
   // Проверка на тех. работы (ПОСЛЕ входа, чтобы админ мог авторизоваться с ПК)
   const isGlobalMaintenance = !!globalKibiks["SYSTEM_MAINTENANCE"];
   const isMixazx = tgUser?.username?.toLowerCase() === "mixazx" || currentUser?.username?.toLowerCase() === "@mixazx";
-  const showMaintenanceScreen = !isMixazx && (isGlobalMaintenance || currentUser?.showMaintenance);
+  const showMaintenanceScreen = currentUser?.showMaintenance || (isGlobalMaintenance && !isMixazx);
 
   if (showMaintenanceScreen) {
     return (
