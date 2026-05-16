@@ -134,7 +134,7 @@ function AppContent() {
         className="size-full relative overflow-hidden flex flex-col"
         style={{ background: bg, minHeight: "100dvh", maxWidth: 430, margin: "0 auto" }}
       >
-        {/* White/dark light glow from bottom */}netlify
+        {/* White/dark light glow from bottom */}
         <div
           className="pointer-events-none absolute inset-0 z-0"
           style={{

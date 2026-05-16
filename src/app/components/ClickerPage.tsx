@@ -29,16 +29,24 @@ export function ClickerPage() {
   const currentPower = currentUser?.clickPower || 1;
   
   const [uncommitted, setUncommitted] = useState(() => {
-    const saved = localStorage.getItem(`kibik_clicks_${myId}`);
-    return saved ? parseInt(saved, 10) || 0 : 0;
+    try {
+      const saved = localStorage.getItem(`kibik_clicks_${myId}`);
+      return saved ? parseInt(saved, 10) || 0 : 0;
+    } catch (e) {
+      return 0;
+    }
   });
   const displayCrystals = dbCrystals + uncommitted;
   
   const [floatingTexts, setFloatingTexts] = useState<{ id: number; x: number; y: number; val: number }[]>([]);
 
   const [saves, setSaves] = useState<SaveSlot[]>(() => {
-    const saved = localStorage.getItem(`kibik_saves_${myId}`);
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem(`kibik_saves_${myId}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
   const [showSaveModal, setShowSaveModal] = useState(false);
 
