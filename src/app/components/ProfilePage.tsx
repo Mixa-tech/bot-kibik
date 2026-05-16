@@ -25,7 +25,7 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
   const [tradeOffer, setTradeOffer] = useState<InventoryItem | null>(null);
   const [tradeRequest, setTradeRequest] = useState<InventoryItem | null>(null);
 
-  const { role: myRole, users, updateUserRole, banUser, tgUser, trades, createTrade, acceptTrade, declineTrade } = useApp();
+  const { role: myRole, users, updateUserRole, banUser, unbanUser, tgUser, trades, createTrade, acceptTrade, declineTrade } = useApp();
   const myId = tgUser ? tgUser.id.toString() : "12345";
   const pendingIncoming = trades.filter((t) => t.receiver_id === myId && t.status === "pending");
   const pendingOutgoing = trades.filter((t) => t.sender_id === myId && t.status === "pending");
@@ -451,6 +451,19 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
                           Подтвердить бан
                         </button>
                       </motion.div>
+                    )}
+                    
+                    {selectedUser.bannedUntil && selectedUser.bannedUntil > new Date() && (
+                      <button
+                        onClick={() => {
+                          unbanUser(selectedUser.id);
+                          setSelectedUser({ ...selectedUser, bannedUntil: null as any, banReason: undefined });
+                        }}
+                        className="w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 mt-2"
+                        style={{ background: "rgba(74, 222, 128, 0.15)", color: "#4ade80" }}
+                      >
+                        <ShieldAlert size={16} /> Снять бан
+                      </button>
                     )}
                   </div>
                 )}

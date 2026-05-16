@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Package, Sparkles, CheckCircle, XCircle, ChevronRight, PlusCircle, ImagePlus } from "lucide-react";
+import { Package, Sparkles, CheckCircle, XCircle, ChevronRight } from "lucide-react";
 import { useTheme, glass, tc } from "./ThemeContext";
 import { useApp } from "../AppContext";
 
@@ -38,45 +38,8 @@ export function HomePage({ onAddItem, inventory }: HomePageProps) {
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error" | "duplicate">("idle");
   const [lastAdded, setLastAdded] = useState<InventoryItem | null>(null);
-
-  const { role, globalKibiks, addGlobalKibik, removeGlobalKibik } = useApp();
-
-  // Admin form state
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          const MAX_SIZE = 256;
-          let width = img.width;
-          let height = img.height;
-          if (width > height) {
-            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-          } else {
-            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx?.drawImage(img, 0, 0, width, height);
-          setNewEmoji(canvas.toDataURL("image/jpeg", 0.7)); // Сжимаем качество до 70%
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const [newCode, setNewCode] = useState("");
-  const [newName, setNewName] = useState("");
-  const [newRarity, setNewRarity] = useState<"common" | "rare" | "epic" | "legendary">("common");
-  const [newEmoji, setNewEmoji] = useState("📦");
-  const [adminStatus, setAdminStatus] = useState<"idle" | "success">("idle");
+  
+  const { globalKibiks, removeGlobalKibik } = useApp();
 
   const handleSubmit = () => {
     const trimmed = code.trim().toUpperCase();
@@ -102,23 +65,6 @@ export function HomePage({ onAddItem, inventory }: HomePageProps) {
     setTimeout(() => setStatus("idle"), 3000);
   };
 
-  const handleAdminAddKibik = () => {
-    if (!newCode || !newName || !newEmoji) return;
-    
-    addGlobalKibik(newCode, {
-      code: newCode.toUpperCase(),
-      name: newName,
-      rarity: newRarity,
-      emoji: newEmoji,
-    });
-    
-    setAdminStatus("success");
-    setNewCode("");
-    setNewName("");
-    setNewEmoji("📦");
-    setTimeout(() => setAdminStatus("idle"), 2000);
-  };
-
   const recentItems = inventory.slice(-3).reverse();
 
   return (
@@ -140,91 +86,6 @@ export function HomePage({ onAddItem, inventory }: HomePageProps) {
         </h1>
         <p className="text-sm mt-1" style={{ color: c.muted }}>Получи кибик в инвентарь</p>
       </div>
-
-      {/* Admin Panel */}
-      {role === "admin" && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl p-4 flex flex-col gap-3"
-          style={{
-            ...glass(isDark, 0.08),
-            border: "1px solid rgba(234, 179, 8, 0.3)", // golden border
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-yellow-400">👑</span>
-            <h2 className="text-sm font-semibold text-yellow-400">Панель Админа: Создать Кибик</h2>
-          </div>
-          <input
-            type="text"
-            value={newCode}
-            onChange={(e) => setNewCode(e.target.value.toUpperCase())}
-            placeholder="Код (например, NEW2026)"
-            className="w-full rounded-xl px-3 py-2 outline-none text-sm"
-            style={{ ...glass(isDark, 0.06), color: c.primary }}
-          />
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Название"
-            className="w-full rounded-xl px-3 py-2 outline-none text-sm"
-            style={{ ...glass(isDark, 0.06), color: c.primary }}
-          />
-          <div className="flex gap-2">
-            <div className="flex flex-1 relative">
-              <input
-                type="text"
-                value={newEmoji}
-                onChange={(e) => setNewEmoji(e.target.value)}
-                placeholder="Эмодзи/URL"
-                className="w-full rounded-xl px-3 py-2 pr-10 outline-none text-sm"
-                style={{ ...glass(isDark, 0.06), color: c.primary }}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-lg"
-                style={{ ...glass(isDark, 0.1), color: c.muted }}
-                title="Загрузить фото"
-              >
-                <ImagePlus size={14} />
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept="image/*"
-                className="hidden"
-              />
-            </div>
-            <select
-              value={newRarity}
-              onChange={(e) => setNewRarity(e.target.value as any)}
-              className="flex-1 rounded-xl px-3 py-2 outline-none text-sm appearance-none min-w-[100px]"
-              style={{ ...glass(isDark, 0.06), color: c.primary }}
-            >
-              <option value="common">Обычный</option>
-              <option value="rare">Редкий</option>
-              <option value="epic">Эпический</option>
-              <option value="legendary">Легендарный</option>
-            </select>
-          </div>
-          <button
-            onClick={handleAdminAddKibik}
-            className="w-full py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2"
-            style={{
-              background: isDark ? "rgba(234, 179, 8, 0.15)" : "rgba(234, 179, 8, 0.1)",
-              color: "#eab308",
-            }}
-          >
-            <PlusCircle size={16} /> Добавить в систему
-          </button>
-          {adminStatus === "success" && <div className="text-green-400 text-xs text-center mt-1">Успешно добавлено!</div>}
-          {adminStatus === "error" && <div className="text-red-400 text-xs text-center mt-1">Заполни все поля (код и название)!</div>}
-        </motion.div>
-      )}
 
       {/* Input card */}
       <motion.div

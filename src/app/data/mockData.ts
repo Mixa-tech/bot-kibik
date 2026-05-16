@@ -15,6 +15,9 @@ export interface MockUser {
   bannedUntil?: Date | null;
   banReason?: string;
   inventory?: InventoryItem[];
+  crystals?: number;
+  clickPower?: number;
+  banCount?: number;
 }
 
 export const MOCK_USERS: MockUser[] = [

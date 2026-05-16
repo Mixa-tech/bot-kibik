@@ -1,18 +1,21 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Home, Package, User } from "lucide-react";
+import { Home, Package, User, Zap, ShieldAlert } from "lucide-react";
 import { ThemeContext } from "./components/ThemeContext";
 import { HomePage } from "./components/HomePage";
 import { InventoryPage } from "./components/InventoryPage";
 import { ProfilePage } from "./components/ProfilePage";
+import { ClickerPage } from "./components/ClickerPage";
+import { AdminDashboard } from "./components/AdminDashboard";
 import type { InventoryItem } from "./components/HomePage";
 import { AppProvider, useApp } from "./AppContext";
 
-type Tab = "home" | "inventory" | "profile";
+type Tab = "home" | "inventory" | "clicker" | "profile";
 
 const TABS = [
   { key: "home" as Tab, label: "Главная", Icon: Home },
   { key: "inventory" as Tab, label: "Инвентарь", Icon: Package },
+  { key: "clicker" as Tab, label: "Кликер", Icon: Zap },
   { key: "profile" as Tab, label: "Профиль", Icon: User },
 ];
 
@@ -24,6 +27,12 @@ function AppContent() {
   const currentUserId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find((u) => u.id === currentUserId);
   const inventory = currentUser?.inventory || [];
+
+  // СЕКРЕТНАЯ ССЫЛКА ДЛЯ ПЛАНШЕТА
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("admin") === "1") {
+    return <AdminDashboard />;
+  }
 
   const addItem = (item: InventoryItem) => {
     addKibikToUser(currentUserId, item);
@@ -37,6 +46,22 @@ function AppContent() {
     : "0 -2px 20px rgba(0,0,0,0.04), 0 8px 40px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.95)";
   
   const myName = tgUser ? `${tgUser.first_name} ${tgUser.last_name || ""}`.trim() : "Алекс";
+
+  // Проверка на бан
+  const isBanned = currentUser?.bannedUntil && new Date(currentUser.bannedUntil) > new Date();
+  if (isBanned) {
+    return (
+      <div className="size-full fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 text-center" style={{ background: "#0a0a0a", color: "#ef4444" }}>
+        <ShieldAlert size={80} className="mb-6 text-red-600 animate-pulse" />
+        <h1 className="text-4xl font-black mb-3 tracking-widest">ВЫ ЗАБАНЕНЫ</h1>
+        <p className="text-sm text-red-400/80 mb-8 font-medium">Доступ к системе строго ограничен.</p>
+        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 w-full text-left max-w-sm">
+          <p className="text-sm mb-3"><strong className="text-white">Причина:</strong> {currentUser.banReason || "Нарушение правил"}</p>
+          <p className="text-sm"><strong className="text-white">Окончание:</strong> {new Date(currentUser.bannedUntil!).toLocaleString("ru-RU", {day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"})}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ThemeContext.Provider value={{ isDark }}>
@@ -99,6 +124,7 @@ function AppContent() {
             >
               {activeTab === "home"      && <HomePage onAddItem={addItem} inventory={inventory} />}
               {activeTab === "inventory" && <InventoryPage inventory={inventory} />}
+              {activeTab === "clicker"   && <ClickerPage />}
               {activeTab === "profile"   && <ProfilePage inventory={inventory} myName={myName} />}
             </motion.div>
           </AnimatePresence>

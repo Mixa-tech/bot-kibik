@@ -32,9 +32,12 @@ export interface AppState {
   removeGlobalKibik: (code: string) => void;
   updateUserRole: (userId: string, newRole: Role) => void;
   banUser: (userId: string, until: Date, reason: string) => void;
+  unbanUser: (userId: string) => void;
+  handleCheatBan: (userId: string) => void;
   addKibikToUser: (userId: string, item: InventoryItem) => void;
   appError: string | null;
   trades: Trade[];
+  syncClicker: (userId: string, crystals: number, clickPower: number) => void;
   createTrade: (receiverId: string, offer: InventoryItem, request: InventoryItem) => void;
   acceptTrade: (tradeId: string) => void;
   declineTrade: (tradeId: string) => void;
@@ -75,6 +78,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           bio: "",
           topEmoji: "🧊",
           role: isMixazx ? "admin" : "user",
+          crystals: 0,
+          clickPower: 1,
+          banCount: 0,
           inventory: [],
         };
       } else {
@@ -91,6 +97,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           bio: "Локальный тест",
           topEmoji: "🧊",
           role: "admin",
+          crystals: 0,
+          clickPower: 1,
+          banCount: 0,
           inventory: [],
         };
       }
@@ -197,6 +206,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Отправляем информацию о бане в базу Supabase
     supabase.from("users").update({ bannedUntil: until, banReason: reason }).eq("id", userId).then(({ error }) => {
       if (error) console.error("Ошибка выдачи бана:", error);
+    });
+  };
+
+  const unbanUser = (userId: string) => {
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, bannedUntil: null as any, banReason: undefined } : u)));
+    supabase.from("users").update({ bannedUntil: null, banReason: null }).eq("id", userId).then();
+  };
+
+  const handleCheatBan = (userId: string) => {
+    setUsers((prev) => {
+      const user = prev.find(u => u.id === userId);
+      if (!user) return prev;
+      const count = user.banCount || 0;
+      const until = new Date();
+      if (count === 0) until.setDate(until.getDate() + 30); // Первый раз 30 дней
+      else until.setFullYear(until.getFullYear() + 100); // Навсегда
+      
+      supabase.from("users").update({ bannedUntil: until, banReason: "Использование автокликера", banCount: count + 1 }).eq("id", userId).then();
+      return prev.map(u => u.id === userId ? { ...u, bannedUntil: until, banReason: "Автокликер", banCount: count + 1 } : u);
+    });
+  };
+
+  const syncClicker = (userId: string, crystals: number, clickPower: number) => {
+    setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, crystals, clickPower } : u));
+    supabase.from("users").update({ crystals, clickPower }).eq("id", userId).then(({ error }) => {
+      if (error) console.error("Ошибка сохранения кликера:", error);
     });
   };
 
@@ -319,7 +354,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, addKibikToUser, appError, trades, createTrade, acceptTrade, declineTrade }}>
+    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, addKibikToUser, appError, trades, syncClicker, createTrade, acceptTrade, declineTrade }}>
       {children}
     </AppContext.Provider>
   );
