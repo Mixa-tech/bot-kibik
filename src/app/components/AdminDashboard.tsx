@@ -78,6 +78,22 @@ export function AdminDashboard() {
     setTimeout(() => setStatus("idle"), 2000);
   };
 
+  // Проверка на бан администратора/креатора
+  const isBanned = currentUser?.bannedUntil && new Date(currentUser.bannedUntil) > new Date();
+  if (isBanned) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-6 text-center text-[#ef4444] font-sans">
+        <ShieldAlert size={80} className="mb-6 text-red-600 animate-pulse" />
+        <h1 className="text-4xl font-black mb-3 tracking-widest">ВЫ ЗАБАНЕНЫ</h1>
+        <p className="text-sm text-red-400/80 mb-8 font-medium">Доступ к панели управления строго ограничен.</p>
+        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 w-full text-left max-w-sm">
+          <p className="text-sm mb-3"><strong className="text-white">Причина:</strong> {currentUser.banReason || "Нарушение правил"}</p>
+          <p className="text-sm"><strong className="text-white">Окончание:</strong> {new Date(currentUser.bannedUntil!).toLocaleString("ru-RU", {day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"})}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuth) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4 text-white font-sans text-center">
