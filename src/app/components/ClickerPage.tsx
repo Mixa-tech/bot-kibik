@@ -76,6 +76,14 @@ export function ClickerPage() {
     };
   }, [syncClicker]);
 
+  const handleManualSave = () => {
+    if (uncommitted > 0) {
+      syncClicker(myId, dbCrystals + uncommitted, currentPower);
+      setUncommitted(0);
+      localStorage.removeItem(`kibik_clicks_${myId}`);
+    }
+  };
+
   // Интеллектуальная синхронизация (каждую секунду скидываем клики на сервер без сброса таймера)
   useEffect(() => {
     const interval = setInterval(() => {
@@ -190,7 +198,7 @@ export function ClickerPage() {
       </div>
 
       {/* Upgrades */}
-      <div className="mt-auto pb-4 relative z-10">
+      <div className="mt-auto pb-4 relative z-10 flex flex-col gap-2">
         <button
           disabled={currentPower >= MAX_POWER || displayCrystals < getUpgradeCost(currentPower)}
           onClick={handleUpgrade}
@@ -200,6 +208,15 @@ export function ClickerPage() {
           <span className="text-white font-bold flex items-center gap-2"><Zap size={16} className="text-blue-400" /> Прокачать силу клика (Текущая: {currentPower})</span>
           {currentPower < MAX_POWER && <span className="text-xs text-blue-300 mt-1">Цена: {getUpgradeCost(currentPower).toLocaleString()} 💎</span>}
           {currentPower >= MAX_POWER && <span className="text-xs text-yellow-400 mt-1">Максимальный уровень!</span>}
+        </button>
+
+        <button
+          onClick={handleManualSave}
+          disabled={uncommitted === 0}
+          className="w-full py-3 rounded-2xl flex items-center justify-center disabled:opacity-50 transition-colors"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+        >
+          <span className="text-white font-semibold text-sm">💾 Сохранить вручную ({uncommitted} 💎)</span>
         </button>
       </div>
     </div>

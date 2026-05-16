@@ -21,6 +21,20 @@ export function AdminDashboard() {
   const [isAuth, setIsAuth] = useState(false);
   const [globalTransfer, setGlobalTransfer] = useState<{ sourceUserId: string, itemId: string, item: any } | null>(null);
 
+  const isMaintenance = !!globalKibiks["SYSTEM_MAINTENANCE"];
+  const toggleMaintenance = () => {
+    if (isMaintenance) {
+      removeGlobalKibik("SYSTEM_MAINTENANCE");
+    } else {
+      addGlobalKibik("SYSTEM_MAINTENANCE", {
+        code: "SYSTEM_MAINTENANCE",
+        name: "Технические работы",
+        rarity: "legendary",
+        emoji: "🛠"
+      });
+    }
+  };
+
   // Admin form state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [newCode, setNewCode] = useState("");
@@ -146,9 +160,14 @@ export function AdminDashboard() {
               <p className="text-sm text-neutral-400">Панель управления администратора</p>
             </div>
           </div>
-          <button onClick={() => { window.location.search = ""; }} className="flex items-center gap-2 text-neutral-400 hover:text-white bg-[#1a1a1a] px-4 py-2 rounded-lg transition-colors border border-[#333]">
-            <LogOut size={16} /> Выйти
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={toggleMaintenance} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors border ${isMaintenance ? 'bg-red-500/20 text-red-500 border-red-500/30 hover:bg-red-500/30' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20'}`}>
+              <ShieldAlert size={16} /> {isMaintenance ? "Выключить тех. работы" : "Включить тех. работы"}
+            </button>
+            <button onClick={() => { window.location.search = ""; }} className="flex items-center gap-2 text-neutral-400 hover:text-white bg-[#1a1a1a] px-4 py-2 rounded-lg transition-colors border border-[#333]">
+              <LogOut size={16} /> Выйти
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

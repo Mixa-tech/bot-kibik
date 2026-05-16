@@ -24,7 +24,7 @@ const TABS = [
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [isDark, setIsDark] = useState(true);
-  const { tgUser, users, addKibikToUser, appError, clearLoginCode } = useApp();
+  const { tgUser, users, addKibikToUser, appError, clearLoginCode, globalKibiks } = useApp();
 
   const currentUserId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find((u) => u.id === currentUserId);
