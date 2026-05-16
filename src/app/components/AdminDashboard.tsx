@@ -3,7 +3,7 @@ import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, Che
 import { useApp } from "../AppContext";
 
 export function AdminDashboard() {
-  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, giveCrystals, role, tgUser, transferKibik, requestLoginCode, verifyLoginCode, toggleUserMaintenance } = useApp();
+  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, editUserSave, role, tgUser, transferKibik, requestLoginCode, verifyLoginCode, toggleUserMaintenance } = useApp();
   const myId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find(u => u.id === myId);
 
@@ -14,6 +14,10 @@ export function AdminDashboard() {
   const [banReason, setBanReason] = useState("");
 
   const [transferModalUser, setTransferModalUser] = useState<any>(null);
+
+  const [editSaveUser, setEditSaveUser] = useState<any>(null);
+  const [editCrystals, setEditCrystals] = useState("0");
+  const [editPower, setEditPower] = useState("1");
 
   const [loginUser, setLoginUser] = useState("");
   const [loginPin, setLoginPin] = useState("");
@@ -265,13 +269,10 @@ export function AdminDashboard() {
                       <button onClick={() => setTransferModalUser(u)} className="bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Передать кибик">🎁</button>
 
                       <button onClick={() => {
-                        const amountStr = window.prompt(`Выдать кристаллы игроку ${u.name}?\nВведите количество (можно с минусом, чтобы забрать):`);
-                        if (!amountStr) return;
-                        const amount = parseInt(amountStr, 10);
-                        if (!isNaN(amount) && amount !== 0) {
-                          giveCrystals(u.id, amount);
-                        }
-                      }} className="bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 hover:bg-cyan-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Выдать кристаллы">+💎</button>
+                        setEditSaveUser(u);
+                        setEditCrystals(u.crystals?.toString() || "0");
+                        setEditPower(u.clickPower?.toString() || "1");
+                      }} className="bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 hover:bg-cyan-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Редактировать сохранение">💾 Сохранение</button>
 
                       <button onClick={() => setSelectedUser(u)} className="bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">Инвентарь</button>
                       
@@ -394,6 +395,36 @@ export function AdminDashboard() {
           </div>
         );
       })()}
+
+      {/* Edit Save Modal */}
+      {editSaveUser && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#111] border border-[#222] rounded-3xl p-6 w-full max-w-sm flex flex-col shadow-2xl">
+            <h2 className="text-xl font-bold mb-2">Сохранение: {editSaveUser.name}</h2>
+            <p className="text-xs text-neutral-400 mb-4">Установите новые значения для аккаунта</p>
+            
+            <div className="mb-3">
+              <label className="text-xs text-neutral-400 mb-1 block uppercase tracking-wider">Кристаллы</label>
+              <input type="number" value={editCrystals} onChange={e => setEditCrystals(e.target.value)} className="w-full bg-[#0a0a0a] border border-[#333] rounded-xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors" />
+            </div>
+            
+            <div className="mb-6">
+              <label className="text-xs text-neutral-400 mb-1 block uppercase tracking-wider">Сила клика</label>
+              <input type="number" value={editPower} onChange={e => setEditPower(e.target.value)} className="w-full bg-[#0a0a0a] border border-[#333] rounded-xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors" />
+            </div>
+            
+            <div className="flex gap-3">
+              <button onClick={() => setEditSaveUser(null)} className="flex-1 py-3 rounded-xl bg-[#222] text-white hover:bg-[#333] transition-colors font-semibold">Отмена</button>
+              <button onClick={() => {
+                const c = parseInt(editCrystals) || 0;
+                const p = parseInt(editPower) || 1;
+                editUserSave(editSaveUser.id, c, p);
+                setEditSaveUser(null);
+              }} className="flex-1 py-3 rounded-xl bg-cyan-600/20 text-cyan-500 hover:bg-cyan-600/30 border border-cyan-500/30 transition-colors font-semibold">Сохранить</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Global Transfer Modal (Admin transferring any user's kibik) */}
       {globalTransfer && (

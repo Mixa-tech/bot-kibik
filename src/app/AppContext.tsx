@@ -45,7 +45,7 @@ export interface AppState {
   requestLoginCode: (username: string, requireAdmin?: boolean) => Promise<boolean>;
   verifyLoginCode: (username: string, code: string) => boolean;
   clearLoginCode: () => void;
-  giveCrystals: (userId: string, amount: number) => void;
+  editUserSave: (userId: string, crystals: number, clickPower: number) => void;
   addKibikToUser: (userId: string, item: InventoryItem) => void;
   transferKibik: (senderId: string, receiverId: string, kibikId: string) => void;
   removeKibikFromUser: (userId: string, kibikId: string) => void;
@@ -292,23 +292,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUsers(prev => prev.map(u => u.id === currentId ? { ...u, loginCode: null } : u));
   };
 
-  const giveCrystals = (userId: string, amount: number) => {
+  const editUserSave = (userId: string, crystals: number, clickPower: number) => {
     setUsers((prev) => {
       const user = prev.find(u => u.id === userId);
       if (!user) return prev;
       
-      const newCrystals = (user.crystals || 0) + amount;
-      
-      supabase.from("users").update({ crystals: newCrystals }).eq("id", userId)
+      supabase.from("users").update({ crystals, clickPower }).eq("id", userId)
         .then(({ error }) => {
           if (error) {
-            console.error("Ошибка выдачи кристаллов:", error);
+            console.error("Ошибка обновления сохранения:", error);
             setAppError(`Ошибка: ${error.message}`);
           }
         }).catch(err => setAppError(`Сбой сети: ${err.message || String(err)}`));
 
       return prev.map((u) => 
-        u.id === userId ? { ...u, crystals: newCrystals } : u
+        u.id === userId ? { ...u, crystals, clickPower } : u
       );
     });
   };
@@ -546,7 +544,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, toggleUserMaintenance, requestLoginCode, verifyLoginCode, clearLoginCode, giveCrystals, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
+    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, toggleUserMaintenance, requestLoginCode, verifyLoginCode, clearLoginCode, editUserSave, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
       {children}
     </AppContext.Provider>
   );
