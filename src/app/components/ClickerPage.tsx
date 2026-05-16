@@ -36,6 +36,12 @@ export function ClickerPage() {
   
   const [floatingTexts, setFloatingTexts] = useState<{ id: number; x: number; y: number; val: number }[]>([]);
 
+  const [saves, setSaves] = useState<SaveSlot[]>(() => {
+    const saved = localStorage.getItem(`kibik_saves_${myId}`);
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [showSaveModal, setShowSaveModal] = useState(false);
+
   const clickTimes = useRef<number[]>([]);
 
   const level = Math.max(1, Math.floor((currentUser?.inventory?.length || 0) / 3) + 1);
