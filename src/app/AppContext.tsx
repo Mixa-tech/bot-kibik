@@ -122,7 +122,7 @@ export interface AppState {
   convertPasscoins: () => void;
   claimDailyBonus: (rewardType: 'omin' | 'crystals') => void;
   buyAutoClicker: (level: 1 | 2) => void;
-  editUserSave: (userId: string, crystals: number, clickPower: number, passcoins?: number) => void;
+  editUserSave: (userId: string, crystals: number, clickPower: number, passcoins?: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -145,6 +145,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const tg = (window as any).Telegram?.WebApp;
       const tgUser = tg?.initDataUnsafe?.user;
       let currentUser: any = null;
+      let isDesktopSaved = false;
 
       // 1. Инициализация пользователя
       if (tgUser) {
@@ -169,31 +170,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           clickPower: 1,
           inventory: [],
         };
+      } else if (localStorage.getItem("kibik_logged_in_user_id")) {
+        isDesktopSaved = true;
       } else {
-        const localGuestId = parseInt(localStorage.getItem("kibik_guest_id") || "0") || Math.floor(Math.random() * 1000000000);
-        localStorage.setItem("kibik_guest_id", localGuestId.toString());
-        
-        setTgUser({ id: localGuestId as any, first_name: "Web", username: "Guest" });
-        setRole("user");
-        currentUser = {
-          id: localGuestId.toString(),
-          name: "Web Guest",
-          username: "@guest",
-          avatar: "LO",
-          status: "online",
-          kibiks: 0,
-          level: 1,
-          bio: "Локальный тест",
-          topEmoji: "🧊",
-          role: "user",
-          crystals: 0,
-          clickPower: 1,
-          banCount: 0,
-          passcoins: 0,
-          auto_clickers: { level1: 0, level2: 0 },
-          inventory: [],
-        };
       }
+
+        // 2.5 Если есть сохраненный логин на ПК
+        if (isDesktopSaved) {
+          const savedId = localStorage.getItem("kibik_logged_in_user_id");
+          const found = merged.find(u => u.id === savedId);
+          if (found) {
+            currentUser = found;
+            setTgUser({ id: parseInt(found.id) || 12345, first_name: found.name, username: found.username?.replace("@", "") });
+            setRole(found.role);
+          }
+        }
+
+        if (!currentUser) {
+          const localGuestId = parseInt(localStorage.getItem("kibik_guest_id") || "0") || Math.floor(Math.random() * 1000000000);
+          localStorage.setItem("kibik_guest_id", localGuestId.toString());
+          setTgUser({ id: localGuestId as any, first_name: "Web", username: "Guest" });
+          setRole("user");
+          currentUser = {
+            id: localGuestId.toString(),
+            name: "Web Guest",
+            username: "@guest",
+            avatar: "LO",
+            status: "online",
+            kibiks: 0,
+            level: 1,
+            bio: "Локальный тест",
+            topEmoji: "🧊",
+            role: "user",
+            crystals: 0, clickPower: 1, banCount: 0, passcoins: 0, auto_clickers: { level1: 0, level2: 0 }, inventory: [],
+          };
+        }
 
       try {
         // 2. Скачиваем пользователей из Supabase
@@ -221,7 +232,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setAppError(`Ошибка сохранения: ${insertError.message}`);
             console.error("Ошибка при сохранении в Supabase:", insertError);
           }
-        } else if (meInDb) {
+        } else if (meInDb && tgUser) {
           // Если юзер уже есть в БД, обновляем роль до актуальной
           setRole(meInDb.role);
         }
@@ -450,6 +461,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCreatorProfile(null);
     }
 
+    localStorage.setItem("kibik_logged_in_user_id", user.id.toString());
+
     return true;
   };
 
@@ -459,25 +472,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUsers(prev => prev.map(u => u.id === currentId ? { ...u, loginCode: null } : u));
   };
 
-  const editUserSave = (userId: string, crystals: number, clickPower: number, passcoins?: number) => {
-    setUsers((prev) => {
-      const user = prev.find(u => u.id === userId);
-      if (!user) return prev;
-      
-      const updateData: any = { crystals, clickPower };
-      if (passcoins !== undefined) updateData.passcoins = passcoins;
-      supabase.from("users").update(updateData).eq("id", userId)
-        .then(({ error }) => {
-          if (error) {
-            console.error("Ошибка обновления сохранения:", error);
-            setAppError(`Ошибка: ${error.message}`);
-          }
-        }).catch(err => setAppError(`Сбой сети: ${err.message || String(err)}`));
+  const editUserSave = async (userId: string, crystals: number, clickPower: number, passcoins?: number) => {
+    const updateData: any = { crystals, clickPower };
+    if (passcoins !== undefined) updateData.passcoins = passcoins;
+    
+    setUsers((prev) => prev.map((u) => 
+      u.id === userId ? { ...u, crystals, clickPower, passcoins: passcoins !== undefined ? passcoins : u.passcoins } : u
+    ));
 
-      return prev.map((u) => 
-        u.id === userId ? { ...u, crystals, clickPower, passcoins: passcoins !== undefined ? passcoins : u.passcoins } : u
-      );
-    });
+    const { error } = await supabase.from("users").update(updateData).eq("id", userId);
+    if (error) {
+      console.error("Ошибка обновления сохранения:", error);
+      setAppError(`Ошибка: ${error.message}`);
+    }
   };
 
   const syncClicker = (userId: string, crystals: number, clickPower: number) => {
@@ -789,22 +796,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
-  const editCreatorProfile = (profileId: string, data: { ominicoins: number, creator_level: CreatorProfile['creator_level'], active_subscription: string | null }) => {
+  const editCreatorProfile = async (profileId: string, data: { ominicoins: number, creator_level: CreatorProfile['creator_level'], active_subscription: string | null }) => {
     setCreatorProfiles(prev => prev.map(p => p.id === profileId ? { ...p, ...data } : p));
-    const { error } = supabase.from("creator_profiles").update(data).eq("id", profileId);
+    const { error } = await supabase.from("creator_profiles").update(data).eq("id", profileId);
     if (error) {
       setAppError(error.message);
       console.error(error);
     }
   };
 
-  const editMyCreatorProfile = (data: { display_name: string, avatar_url: string | null }) => {
+  const editMyCreatorProfile = async (data: { display_name: string, avatar_url: string | null }) => {
     if (!creatorProfile) return;
 
     setCreatorProfile(prev => prev ? { ...prev, ...data } : null);
     setCreatorProfiles(prev => prev.map(p => p.id === creatorProfile.id ? { ...p, ...data } : p));
 
-    const { error } = supabase.from("creator_profiles").update(data).eq("id", creatorProfile.id);
+    const { error } = await supabase.from("creator_profiles").update(data).eq("id", creatorProfile.id);
     if (error) {
       setAppError(error.message);
       console.error(error);

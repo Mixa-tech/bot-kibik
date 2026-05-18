@@ -205,7 +205,7 @@ export function AdminDashboard() {
             <button onClick={() => setIsAdminDark(d => !d)} className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors" style={glass(isAdminDark, 0.1)}>
               {isAdminDark ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-blue-500" />}
             </button>
-            <button onClick={() => { window.location.search = ""; }} className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors" style={{...glass(isAdminDark, 0.1), color: isAdminDark ? '#aaa' : '#555'}}>
+            <button onClick={() => { localStorage.removeItem("kibik_logged_in_user_id"); window.location.search = ""; }} className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors" style={{...glass(isAdminDark, 0.1), color: isAdminDark ? '#aaa' : '#555'}}>
               <LogOut size={16} /> Выйти
             </button>
           </div>
