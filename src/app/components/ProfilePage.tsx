@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, Users, Package2, Crown, Star, Zap, ChevronRight, X, ShieldAlert, Ban, ArrowRightLeft } from "lucide-react";
+import { Search, Users, Package2, Crown, Star, Zap, ChevronRight, X, ShieldAlert, Ban, ArrowRightLeft, Wallet, Check, Gem } from "lucide-react";
 import { useTheme, glass, tc } from "./ThemeContext";
 import type { InventoryItem } from "./HomePage";
 import { useApp } from "../AppContext";
@@ -25,10 +25,11 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
   const [tradeOffer, setTradeOffer] = useState<InventoryItem | null>(null);
   const [tradeRequest, setTradeRequest] = useState<InventoryItem | null>(null);
 
-  const { role: myRole, users, updateUserRole, banUser, unbanUser, tgUser, trades, createTrade, acceptTrade, declineTrade } = useApp();
+  const { role: myRole, users, updateUserRole, banUser, unbanUser, tgUser, trades, createTrade, acceptTrade, declineTrade, convertPasscoins, creatorProfiles } = useApp();
   const myId = tgUser ? tgUser.id.toString() : "12345";
   const pendingIncoming = trades.filter((t) => t.receiver_id === myId && t.status === "pending");
   const pendingOutgoing = trades.filter((t) => t.sender_id === myId && t.status === "pending");
+  const currentUser = users.find((u) => u.id === myId);
 
   const myStats = {
     legendary: inventory.filter((i) => i.rarity === "legendary").length,
@@ -59,9 +60,16 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
       (u.username || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const RoleBadge = ({ role }: { role?: "admin" | "creator" | "user" }) => {
+  const RoleBadge = ({ role, userId }: { role?: "admin" | "creator" | "user", userId: string }) => {
     if (role === "admin") return <Crown size={14} className="text-yellow-400 shrink-0" />;
-    if (role === "creator") return <span className="flex items-center justify-center w-[14px] h-[14px] rounded-full bg-purple-500 text-white text-[9px] font-bold shrink-0">C</span>;
+    if (role === "creator") {
+      const profile = creatorProfiles.find(p => p.user_id === userId);
+      if (profile?.creator_level === "legendary") return <Gem size={14} className="text-orange-500 shrink-0" title="Legendary Creator" />;
+      if (profile?.creator_level === "mythic") return <Zap size={14} className="text-purple-400 shrink-0" title="Mythic Creator" />;
+      if (profile?.creator_level === "super") return <Crown size={14} className="text-yellow-400 shrink-0" title="Super Creator" />;
+      if (profile?.creator_level === "verified") return <Check size={14} className="text-blue-400 shrink-0" title="Verified Creator" />;
+      return <Star size={14} className="text-neutral-400 shrink-0" title="Creator" />;
+    }
     return null;
   };
 
@@ -106,7 +114,7 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
             <div className="flex items-center gap-2">
               <h2 className="text-base truncate flex items-center gap-1" style={{ color: c.primary }}>
                 {myName}
-                <RoleBadge role={myRole} />
+                <RoleBadge role={myRole} userId={myId} />
               </h2>
               <div
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full"
@@ -127,11 +135,30 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
           </div>
 
           {/* Count */}
-          <div className="text-center shrink-0">
+          <div className="text-center shrink-0 flex flex-col gap-1 items-end">
+            <div className="flex items-center gap-1 font-bold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-lg border border-yellow-500/20 mb-1">
+                <Wallet size={12}/> {currentUser?.passcoins || 0} PC
+            </div>
+            <div>
             <div className="text-2xl" style={{ color: c.primary }}>{inventory.length}</div>
             <div className="text-[10px]" style={{ color: c.muted }}>кибиков</div>
+            </div>
           </div>
         </div>
+
+      {/* Обменник */}
+      <div className="p-4 rounded-2xl flex flex-col gap-2" style={glass(isDark, 0.05)}>
+        <div className="flex justify-between items-center text-sm mb-1">
+            <span className="font-bold flex items-center gap-2" style={{ color: c.primary }}><Wallet size={16} className="text-yellow-500"/> Обменник</span>
+            <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/20">Курс: 100k 💎 = 10 PC</span>
+        </div>
+        <button 
+            onClick={convertPasscoins}
+            className="w-full py-3 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 border border-yellow-500/30 rounded-xl text-sm font-bold transition-colors mt-2"
+        >
+            Купить 10 Passcoins
+        </button>
+      </div>
 
         {/* Stats */}
         <div className="grid grid-cols-4 gap-2 mt-4">
@@ -264,7 +291,7 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm truncate" style={{ color: c.primary }}>{user.name}</span>
-                  <RoleBadge role={user.role} />
+                  <RoleBadge role={user.role} userId={user.id} />
                 </div>
                 <div className="text-xs truncate" style={{ color: c.muted }}>{user.username}</div>
               </div>
@@ -341,7 +368,7 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
                 <div>
                   <div className="flex items-center justify-center gap-2">
                     <h3 style={{ color: c.primary }}>{selectedUser.name}</h3>
-                    <RoleBadge role={selectedUser.role} />
+                    <RoleBadge role={selectedUser.role} userId={selectedUser.id} />
                   </div>
                   <p className="text-sm" style={{ color: c.muted }}>{selectedUser.username}</p>
                   <div className="flex items-center justify-center gap-1 mt-1">

@@ -1,21 +1,24 @@
 import { useState, useRef } from "react";
-import { Check, Crown, Gem, Pencil, Shield, Star, X, PlusCircle, ImagePlus, Package } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { Check, Crown, Gem, Pencil, Shield, Star, X, PlusCircle, ImagePlus, Package, Gift, Lock } from "lucide-react";
 import { TASKS_CONFIG, type CreatorProfile, useApp } from "./AppContext";
 
 const levelConfig = {
   creator: { label: "Creator", color: "text-neutral-400", icon: <Star size={14} /> },
   verified: { label: "Verified Creator", color: "text-blue-400", icon: <Check size={14} /> },
   super: { label: "Super Creator", color: "text-yellow-400", icon: <Crown size={14} /> },
+  mythic: { label: "Mythic Creator", color: "text-purple-400", icon: <Zap size={14} /> },
+  legendary: { label: "Legendary Creator", color: "text-orange-500", icon: <Gem size={14} /> },
 };
 
 const subs = [
-    { name: "Cores Basic", price: 1000, omin: 100, color: "bg-neutral-700", desc: "Значок + x1.5 клик" },
-    { name: "Cores Gold", price: 5000, omin: 500, color: "bg-yellow-500", desc: "Золото + x2.5 клик" },
-    { name: "Cores +", price: 10000, omin: 1000, color: "bg-gradient-to-r from-purple-500 to-pink-500", desc: "Анимация + x5 клик" },
+    { name: "Cores Basic", passcoin: 10, omin: 100, color: "bg-neutral-700", desc: "Значок + x1.5 клик" },
+    { name: "Cores Gold", passcoin: 50, omin: 500, color: "bg-yellow-500", desc: "Золото + x2.5 клик" },
+    { name: "Cores +", passcoin: 100, omin: 1000, color: "bg-gradient-to-r from-purple-500 to-pink-500", desc: "Анимация + x5 клик" },
 ];
 
 export function CreatorDashboard() {
-  const { creatorProfile, users, tgUser, purchaseSubscription, editMyCreatorProfile, submitKibikForReview } = useApp();
+  const { creatorProfile, users, tgUser, purchaseSubscription, editMyCreatorProfile, submitKibikForReview, claimDailyBonus } = useApp();
   const currentUser = users.find(u => u.id === tgUser?.id.toString());
 
   if (!creatorProfile) return null;
@@ -25,6 +28,7 @@ export function CreatorDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [subAnimation, setSubAnimation] = useState<string | null>(null);
   const [editDisplayName, setEditDisplayName] = useState(creatorProfile.display_name);
   const [editAvatar, setEditAvatar] = useState<string | null>(creatorProfile.avatar_url);
 
@@ -37,6 +41,13 @@ export function CreatorDashboard() {
   const tasks = Object.entries(TASKS_CONFIG).map(([key, config]) => ({
     ...config, key, progress: creatorProfile.task_progress?.[key] || 0,
   }));
+
+  // Ограничения Cores+
+  const lastCreation = creatorProfile.last_kibik_creation_date ? new Date(creatorProfile.last_kibik_creation_date).getTime() : 0;
+  const canCreate = activeSubName === 'Cores +' && (Date.now() - lastCreation > 30 * 24 * 60 * 60 * 1000);
+  
+  const lastDaily = creatorProfile.last_daily_bonus ? new Date(creatorProfile.last_daily_bonus).getTime() : 0;
+  const canClaimDaily = activeSubName === 'Cores +' && (Date.now() - lastDaily > 24 * 60 * 60 * 1000);
 
   // Если пользователь "недоверенный"
   if (creatorProfile.status === 'untrusted') {
@@ -105,6 +116,14 @@ export function CreatorDashboard() {
     setSubmitStatus("success"); setNewCode(""); setNewName(""); setNewEmoji("📦"); setTimeout(() => setSubmitStatus("idle"), 3000);
   };
 
+  const handleBuy = async (sub: any, method: 'omin' | 'passcoin') => {
+    const ok = await purchaseSubscription(sub, method);
+    if (ok) {
+      setSubAnimation(sub.name);
+      setTimeout(() => setSubAnimation(null), 4000);
+    }
+  };
+
   return (
     <div className="min-h-screen text-white p-4 relative">
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2071&auto=format&fit=crop)' }} />
@@ -140,9 +159,22 @@ export function CreatorDashboard() {
         </div>
       </div>
 
+      {/* Ежедневный Бонус (Только Cores +) */}
+      {activeSubName === 'Cores +' && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/30 to-pink-900/30 backdrop-blur-lg border border-purple-500/30">
+            <h2 className="font-bold mb-3 flex items-center gap-2 text-purple-400"><Gift size={18}/> Ежедневный Бонус Cores+</h2>
+            <div className="flex gap-2">
+                <button disabled={!canClaimDaily} onClick={() => claimDailyBonus('omin')} className="flex-1 py-3 bg-purple-500/20 text-purple-300 rounded-xl font-bold text-xs disabled:opacity-50 transition-colors">10 Ominicoins ©</button>
+                <button disabled={!canClaimDaily} onClick={() => claimDailyBonus('crystals')} className="flex-1 py-3 bg-blue-500/20 text-blue-300 rounded-xl font-bold text-xs disabled:opacity-50 transition-colors">5,000 Кристаллов 💎</button>
+            </div>
+            {!canClaimDaily && <p className="text-[10px] text-center mt-2 text-neutral-400">Бонус уже получен сегодня.</p>}
+        </div>
+      )}
+
       {/* Создание Кибика */}
       <div className="p-4 rounded-2xl bg-black/30 backdrop-blur-lg border border-white/10">
         <h2 className="font-bold mb-3 flex items-center gap-2 text-green-400"><PlusCircle size={18}/> Создать Кибик</h2>
+        {canCreate ? (
         <div className="flex flex-col gap-3">
             <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="Код (например: MYKIBIK)" className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-green-400 text-sm" />
             <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Название кибика" className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-green-400 text-sm" />
@@ -168,6 +200,13 @@ export function CreatorDashboard() {
             {submitStatus === "error" && <p className="text-red-400 text-center text-xs">Заполните код и название!</p>}
         </div>
         <p className="text-[10px] text-neutral-400 mt-3 text-center">Ваш кибик появится в игре после проверки администратором.</p>
+        ) : (
+            <div className="flex flex-col items-center justify-center p-4 text-center">
+                <Lock size={32} className="text-neutral-500 mb-2" />
+                <p className="text-sm font-bold text-neutral-300">Доступно только для Cores+</p>
+                <p className="text-xs text-neutral-500 mt-1">Или вы уже создавали кибик в этом месяце.</p>
+            </div>
+        )}
       </div>
 
       {/* Задания */}
@@ -191,6 +230,31 @@ export function CreatorDashboard() {
         </div>
       </div>
 
+      {/* Анимация при покупке подписки */}
+      <AnimatePresence>
+        {subAnimation && (
+          <motion.div
+            className="fixed inset-0 z-[200] flex flex-col items-center justify-center backdrop-blur-2xl"
+            style={{ background: subAnimation === 'Cores Gold' ? 'radial-gradient(circle, rgba(234,179,8,0.2) 0%, rgba(0,0,0,0.9) 100%)' : subAnimation === 'Cores +' ? 'radial-gradient(circle, rgba(168,85,247,0.2) 0%, rgba(0,0,0,0.9) 100%)' : 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.9) 100%)' }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0, y: 50 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: "spring", damping: 12, stiffness: 100 }}
+              className="flex flex-col items-center text-center"
+            >
+               <div className={`w-32 h-32 rounded-full mb-6 flex items-center justify-center shadow-[0_0_80px_rgba(255,255,255,0.2)] ${subAnimation === 'Cores Gold' ? 'bg-yellow-500 shadow-yellow-500/50' : subAnimation === 'Cores +' ? 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-purple-500/50' : 'bg-neutral-600'}`}>
+                  <Crown size={60} className="text-white drop-shadow-md" />
+               </div>
+               <h1 className="text-4xl font-black text-white tracking-widest drop-shadow-lg mb-2">ПОЗДРАВЛЯЕМ!</h1>
+               <p className="text-xl text-neutral-300">Активирована подписка</p>
+               <div className={`text-3xl font-black mt-2 bg-clip-text text-transparent ${subAnimation === 'Cores Gold' ? 'bg-gradient-to-r from-yellow-300 to-yellow-600' : subAnimation === 'Cores +' ? 'bg-gradient-to-r from-purple-400 to-pink-500' : 'bg-gradient-to-r from-neutral-300 to-neutral-500'}`}>
+                 {subAnimation}
+               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Подписки */}
       <div className="p-4 rounded-2xl bg-black/30 backdrop-blur-lg border border-white/10">
         <h2 className="font-bold mb-3">Подписки Cores</h2>
@@ -203,15 +267,16 @@ export function CreatorDashboard() {
                     <div className="text-xs font-bold">{sub.name}</div>
                     <div className="text-[10px] text-neutral-400 mb-2">{sub.desc}</div>
                     {isActive ? (
-                        <div className="mt-auto w-full text-center py-1.5 rounded-lg bg-green-500/20 text-green-400 text-[10px] font-bold">Активна</div>
+                        <div className="mt-auto flex flex-col gap-1 w-full text-center py-1.5 rounded-lg bg-green-500/20 text-green-400 text-[10px] font-bold">Активна</div>
                     ) : (
-                        <button 
-                            onClick={() => purchaseSubscription(sub)}
-                            disabled={creatorProfile.ominicoins < sub.omin}
-                            className="mt-auto w-full text-center py-1.5 rounded-lg bg-purple-600/50 text-purple-300 text-[10px] font-bold hover:bg-purple-600/70 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {sub.omin} ©
-                        </button>
+                        <div className="mt-auto flex flex-col gap-1">
+                            <button onClick={() => handleBuy(sub, 'omin')} disabled={creatorProfile.ominicoins < sub.omin} className="w-full text-center py-1.5 rounded-lg bg-purple-600/50 text-purple-300 text-[10px] font-bold hover:bg-purple-600/70 disabled:opacity-50 disabled:cursor-not-allowed">
+                                {sub.omin} ©
+                            </button>
+                            <button onClick={() => handleBuy(sub, 'passcoin')} disabled={(currentUser?.passcoins || 0) < sub.passcoin} className="w-full text-center py-1.5 rounded-lg bg-yellow-600/50 text-yellow-400 text-[10px] font-bold hover:bg-yellow-600/70 disabled:opacity-50 disabled:cursor-not-allowed">
+                                {sub.passcoin} PC
+                            </button>
+                        </div>
                     )}
                 </div>
             )})}

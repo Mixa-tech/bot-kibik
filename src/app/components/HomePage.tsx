@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Package, Sparkles, CheckCircle, XCircle, ChevronRight } from "lucide-react";
+import { Package, Sparkles, CheckCircle, XCircle, ChevronRight, Crown } from "lucide-react";
 import { useTheme, glass, tc } from "./ThemeContext";
 import { useApp } from "../AppContext";
 
@@ -38,10 +38,11 @@ export function HomePage({ onAddItem, inventory }: HomePageProps) {
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error" | "duplicate">("idle");
   const [lastAdded, setLastAdded] = useState<InventoryItem | null>(null);
+  const [subAnimation, setSubAnimation] = useState<string | null>(null);
   
-  const { globalKibiks, removeGlobalKibik } = useApp();
+  const { globalKibiks, removeGlobalKibik, grantSubscription } = useApp();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const trimmed = code.trim().toUpperCase();
     if (!trimmed) return;
     const itemData = globalKibiks[trimmed];
@@ -50,6 +51,23 @@ export function HomePage({ onAddItem, inventory }: HomePageProps) {
       setTimeout(() => setStatus("idle"), 2500);
       return;
     }
+
+    // Логика активации подписки
+    if (itemData.emoji.startsWith("SUB:")) {
+      const subName = itemData.emoji.split("SUB:")[1];
+      const success = await grantSubscription(subName);
+      if (success) {
+        if (removeGlobalKibik) removeGlobalKibik(trimmed);
+        setSubAnimation(subName);
+        setCode("");
+        setTimeout(() => setSubAnimation(null), 4000);
+      } else {
+        setStatus("error");
+        setTimeout(() => setStatus("idle"), 2500);
+      }
+      return;
+    }
+
     const alreadyHave = inventory.some((i) => i.code === trimmed);
     if (alreadyHave) {
       setStatus("duplicate");
@@ -161,6 +179,31 @@ export function HomePage({ onAddItem, inventory }: HomePageProps) {
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Анимация получения подписки */}
+      <AnimatePresence>
+        {subAnimation && (
+          <motion.div
+            className="fixed inset-0 z-[200] flex flex-col items-center justify-center backdrop-blur-2xl"
+            style={{ background: subAnimation === 'Cores Gold' ? 'radial-gradient(circle, rgba(234,179,8,0.2) 0%, rgba(0,0,0,0.9) 100%)' : subAnimation === 'Cores +' ? 'radial-gradient(circle, rgba(168,85,247,0.2) 0%, rgba(0,0,0,0.9) 100%)' : 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.9) 100%)' }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0, y: 50 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: "spring", damping: 12, stiffness: 100 }}
+              className="flex flex-col items-center text-center"
+            >
+               <div className={`w-32 h-32 rounded-full mb-6 flex items-center justify-center shadow-[0_0_80px_rgba(255,255,255,0.2)] ${subAnimation === 'Cores Gold' ? 'bg-yellow-500 shadow-yellow-500/50' : subAnimation === 'Cores +' ? 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-purple-500/50' : 'bg-neutral-600'}`}>
+                  <Crown size={60} className="text-white drop-shadow-md" />
+               </div>
+               <h1 className="text-4xl font-black text-white tracking-widest drop-shadow-lg mb-2">ПОЗДРАВЛЯЕМ!</h1>
+               <p className="text-xl text-neutral-300">Активирована подписка</p>
+               <div className={`text-3xl font-black mt-2 bg-clip-text text-transparent ${subAnimation === 'Cores Gold' ? 'bg-gradient-to-r from-yellow-300 to-yellow-600' : subAnimation === 'Cores +' ? 'bg-gradient-to-r from-purple-400 to-pink-500' : 'bg-gradient-to-r from-neutral-300 to-neutral-500'}`}>
+                 {subAnimation}
+               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Success reveal */}
       <AnimatePresence>

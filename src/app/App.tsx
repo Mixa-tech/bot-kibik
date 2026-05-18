@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Home, Package, User, Zap, ShieldAlert, Store, X } from "lucide-react";
+import { Home, Package, User, Zap, ShieldAlert, Store, X, RefreshCw } from "lucide-react";
 import { ThemeContext } from "./components/ThemeContext";
 import { HomePage } from "./components/HomePage";
 import { InventoryPage } from "./components/InventoryPage";
@@ -203,7 +203,19 @@ function AppContent() {
         )}
 
         {/* Theme toggle */}
-        <div className="absolute top-4 right-4 z-20">
+        <div className="absolute top-4 right-4 z-20 flex gap-2">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => window.location.reload()}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-base"
+            style={{
+              background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
+              border: `1px solid ${isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.09)"}`,
+              backdropFilter: "blur(16px)",
+            }}
+          >
+            <RefreshCw size={16} style={{ color: isDark ? "#fff" : "#000" }} />
+          </motion.button>
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsDark((d) => !d)}

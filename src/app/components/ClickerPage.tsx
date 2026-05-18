@@ -20,7 +20,7 @@ interface SaveSlot {
 export function ClickerPage() {
   const { isDark } = useTheme();
   const c = tc(isDark);
-  const { tgUser, users, syncClicker, handleCheatBan, creatorProfile } = useApp();
+  const { tgUser, users, syncClicker, handleCheatBan, creatorProfile, buyAutoClicker } = useApp();
   
   const myId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find(u => u.id === myId);
@@ -33,6 +33,10 @@ export function ClickerPage() {
   if (creatorProfile?.active_subscription === 'Cores Gold') multiplier = 2.5;
   if (creatorProfile?.active_subscription === 'Cores +') multiplier = 5;
   const effectivePower = Math.floor(currentPower * multiplier);
+
+  const auto1 = currentUser?.auto_clickers?.level1 || 0;
+  const auto2 = currentUser?.auto_clickers?.level2 || 0;
+  const autoPps = ((auto1 * 1) + (auto2 * 3)) * multiplier;
   
   const [uncommitted, setUncommitted] = useState(() => {
     try {
@@ -151,6 +155,18 @@ export function ClickerPage() {
     return () => clearInterval(interval);
   }, [syncClicker]);
 
+  // Эффект автокликера
+  useEffect(() => {
+    if (autoPps <= 0) return;
+    const interval = setInterval(() => {
+      setUncommitted(prev => {
+        if (dbCrystals + prev >= MAX_CRYSTALS) return prev;
+        return prev + autoPps;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [autoPps, dbCrystals, MAX_CRYSTALS]);
+
   const handleTap = (e: React.TouchEvent | React.MouseEvent) => {
     const now = Date.now();
     
@@ -212,6 +228,7 @@ export function ClickerPage() {
         <div className="w-48 h-2 bg-white/10 rounded-full overflow-hidden mt-2">
           <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${(displayCrystals / MAX_CRYSTALS) * 100}%` }} />
         </div>
+        {autoPps > 0 && <span className="text-[10px] text-green-400 mt-1 font-bold tracking-widest text-center">АВТОКЛИКЕР: +{autoPps} / СЕК</span>}
         <span className="text-xs text-white/50">{displayCrystals.toLocaleString()} / {MAX_CRYSTALS.toLocaleString()}</span>
       </div>
 
@@ -249,6 +266,30 @@ export function ClickerPage() {
             </motion.div>
           ))}
         </AnimatePresence>
+      </div>
+
+      {/* Auto-clickers */}
+      <div className="flex gap-2 mb-2 relative z-10">
+        {(creatorProfile?.active_subscription === 'Cores Gold' || creatorProfile?.active_subscription === 'Cores +') && (
+          <button
+            onClick={() => buyAutoClicker(1)}
+            disabled={auto1 >= 5 || displayCrystals < 25000}
+            className="flex-1 py-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 text-xs font-bold disabled:opacity-50 flex flex-col items-center justify-center transition-colors"
+          >
+            <span>Автоклик 1ур ({auto1}/5)</span>
+            <span className="text-[9px] opacity-70">25,000 💎</span>
+          </button>
+        )}
+        {creatorProfile?.active_subscription === 'Cores +' && (
+          <button
+            onClick={() => buyAutoClicker(2)}
+            disabled={auto2 >= 4 || displayCrystals < 50000}
+            className="flex-1 py-2 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-400 text-xs font-bold disabled:opacity-50 flex flex-col items-center justify-center transition-colors"
+          >
+            <span>Автоклик 2ур ({auto2}/4)</span>
+            <span className="text-[9px] opacity-70">50,000 💎</span>
+          </button>
+        )}
       </div>
 
       {/* Upgrades */}

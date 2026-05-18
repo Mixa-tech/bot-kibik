@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X, Download, ToggleLeft, Crown, UserCheck, ShieldX, Pencil, Sun, Moon, Check, ShieldCheck } from "lucide-react";
+import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X, Download, ToggleLeft, Crown, UserCheck, ShieldX, Pencil, Sun, Moon, Check, ShieldCheck, RefreshCw } from "lucide-react";
 import { type CreatorProfile, useApp } from "../AppContext";
 import { glass } from "./ThemeContext";
 
@@ -18,6 +18,7 @@ export function AdminDashboard() {
 
   const [editSaveUser, setEditSaveUser] = useState<any>(null);
   const [editCrystals, setEditCrystals] = useState("0");
+  const [editPasscoins, setEditPasscoins] = useState("0");
   const [editPower, setEditPower] = useState("1");
 
   const [loginUser, setLoginUser] = useState("");
@@ -31,6 +32,7 @@ export function AdminDashboard() {
   const [editingCreator, setEditingCreator] = useState<CreatorProfile | null>(null);
   const [editOminicoins, setEditOminicoins] = useState("0");
   const [editCreatorLevel, setEditCreatorLevel] = useState<CreatorProfile['creator_level']>('creator');
+  const [editSub, setEditSub] = useState<string>("null");
 
   const ADMIN_TABS = [
     { key: 'main' as const, label: 'Главная', Icon: PlusCircle },
@@ -65,8 +67,10 @@ export function AdminDashboard() {
 
   // Admin form state
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [codeType, setCodeType] = useState<"kibik" | "sub">("kibik");
   const [newCode, setNewCode] = useState("");
   const [newName, setNewName] = useState("");
+  const [newSub, setNewSub] = useState("Cores Basic");
   const [newRarity, setNewRarity] = useState<"common" | "rare" | "epic" | "legendary">("common");
   const [newEmoji, setNewEmoji] = useState("📦");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
@@ -101,21 +105,22 @@ export function AdminDashboard() {
 
   const handleAdd = () => {
     const code = newCode.trim().toUpperCase();
-    const name = newName.trim();
-    if (!code || !name) {
+    if (!code || (codeType === "kibik" && !newName.trim())) {
       setStatus("error");
       setTimeout(() => setStatus("idle"), 2500);
       return;
     }
-    addGlobalKibik(code, {
-      code,
-      name,
-      rarity: newRarity,
-      emoji: newEmoji,
-    });
+    
+    if (codeType === "sub") {
+      addGlobalKibik(code, { code, name: `Подписка ${newSub}`, rarity: "legendary", emoji: `SUB:${newSub}` });
+    } else {
+      addGlobalKibik(code, { code, name: newName.trim(), rarity: newRarity, emoji: newEmoji });
+    }
+    
     setStatus("success");
     setNewCode("");
     setNewName("");
+    setNewSub("Cores Basic");
     setNewEmoji("📦");
     setTimeout(() => setStatus("idle"), 2000);
   };
@@ -189,6 +194,9 @@ export function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button onClick={() => window.location.reload()} className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors" style={glass(isAdminDark, 0.1)} title="Обновить">
+              <RefreshCw size={18} className={isAdminDark ? "text-neutral-300" : "text-neutral-600"} />
+            </button>
             <button onClick={() => setIsAdminDark(d => !d)} className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors" style={glass(isAdminDark, 0.1)}>
               {isAdminDark ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-blue-500" />}
             </button>
@@ -228,35 +236,55 @@ export function AdminDashboard() {
           <div className={`grid grid-cols-1 ${role === 'admin' ? 'lg:grid-cols-2' : 'lg:grid-cols-2'} gap-6`}>
           {/* Колонна 1: Создание */}
           <div className="rounded-2xl p-6 flex flex-col gap-5" style={glass(isAdminDark, 0.05)}>
-            <h2 className={`text-lg font-bold flex items-center gap-2 ${isAdminDark ? 'text-green-400' : 'text-green-600'}`}><PlusCircle size={20}/> Создать Кибик</h2>
+            <div className="flex items-center justify-between">
+              <h2 className={`text-lg font-bold flex items-center gap-2 ${isAdminDark ? 'text-green-400' : 'text-green-600'}`}><PlusCircle size={20}/> Создать промокод</h2>
+              <select value={codeType} onChange={(e) => setCodeType(e.target.value as any)} className="bg-transparent font-bold text-sm outline-none cursor-pointer" style={{ color: isAdminDark ? '#888' : '#666' }}>
+                <option value="kibik">Предмет (Кибик)</option>
+                <option value="sub">Подписка (Cores)</option>
+              </select>
+            </div>
             <div className="flex flex-col gap-3">
               <div>
-                <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Код кибика</label>
-                <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="Например: MEGA2026" className="w-full rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+                <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Код</label>
+                <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="Например: MEGA2026" className="w-full rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors font-mono tracking-wider" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
               </div>
-              <div>
-                <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Название</label>
-                <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Золотой куб" className="w-full rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+              
+              {codeType === "kibik" ? (
                 <div>
-                  <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Картинка</label>
-                  <div className="relative">
-                    <input type="text" value={newEmoji} onChange={(e) => setNewEmoji(e.target.value)} className="w-full rounded-xl px-4 py-3 pr-10 outline-none focus:border-green-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
-                    <button onClick={() => fileInputRef.current?.click()} className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${isAdminDark ? 'text-neutral-400 hover:text-white bg-white/5' : 'text-neutral-500 hover:text-black bg-black/5'}`}><ImagePlus size={16} /></button>
-                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
+                  <div>
+                    <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Название предмета</label>
+                    <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Золотой куб" className="w-full rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
                   </div>
-                </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Картинка</label>
+                      <div className="relative">
+                        <input type="text" value={newEmoji} onChange={(e) => setNewEmoji(e.target.value)} className="w-full rounded-xl px-4 py-3 pr-10 outline-none focus:border-green-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+                        <button onClick={() => fileInputRef.current?.click()} className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${isAdminDark ? 'text-neutral-400 hover:text-white bg-white/5' : 'text-neutral-500 hover:text-black bg-black/5'}`}><ImagePlus size={16} /></button>
+                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Редкость</label>
+                      <select value={newRarity} onChange={(e) => setNewRarity(e.target.value as any)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors appearance-none" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
+                        <option value="common">Обычный</option>
+                        <option value="rare">Редкий</option>
+                        <option value="epic">Эпический</option>
+                        <option value="legendary">Легендарный</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
+              ) : (
                 <div>
-                  <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Редкость</label>
-                  <select value={newRarity} onChange={(e) => setNewRarity(e.target.value as any)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors appearance-none" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
-                    <option value="common">Обычный</option>
-                    <option value="rare">Редкий</option>
-                    <option value="epic">Эпический</option>
-                    <option value="legendary">Легендарный</option>
+                  <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Уровень подписки</label>
+                  <select value={newSub} onChange={(e) => setNewSub(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors appearance-none" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
+                    <option value="Cores Basic">Cores Basic</option>
+                    <option value="Cores Gold">Cores Gold</option>
+                    <option value="Cores +">Cores +</option>
                   </select>
                 </div>
-              </div>
+              )}
             </div>
             <button onClick={handleAdd} className="mt-auto w-full bg-green-500 hover:bg-green-600 text-white rounded-xl py-4 font-bold tracking-wider transition-colors flex items-center justify-center gap-2">
               <PlusCircle size={18} /> СОЗДАТЬ
@@ -320,6 +348,7 @@ export function AdminDashboard() {
                     <button onClick={() => setTransferModalUser(u)} className="bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Передать кибик">🎁</button>
                     <button onClick={() => {
                       setEditSaveUser(u);
+                      setEditPasscoins(u.passcoins?.toString() || "0");
                       setEditCrystals(u.crystals?.toString() || "0");
                       setEditPower(u.clickPower?.toString() || "1");
                     }} className="bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 hover:bg-cyan-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Редактировать сохранение">💾</button>
@@ -362,6 +391,7 @@ export function AdminDashboard() {
                         setEditingCreator(profile);
                         setEditOminicoins(profile.ominicoins.toString());
                         setEditCreatorLevel(profile.creator_level);
+                        setEditSub(profile.active_subscription || "null");
                     }} className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20" title="Редактировать"><Pencil size={16} /></button>
                     <button onClick={() => updateCreatorStatus(profile.id, 'untrusted')} className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg hover:bg-yellow-500/20" title="Сделать недоверенным">
                       <ShieldX size={16} />
@@ -376,6 +406,7 @@ export function AdminDashboard() {
                         setEditingCreator(profile);
                         setEditOminicoins(profile.ominicoins.toString());
                         setEditCreatorLevel(profile.creator_level);
+                        setEditSub(profile.active_subscription || "null");
                     }} className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20" title="Редактировать"><Pencil size={16} /></button>
                     <button onClick={() => updateCreatorStatus(profile.id, 'approved')} className="p-2 bg-green-500/10 text-green-500 rounded-lg hover:bg-green-500/20" title="Вернуть доверие">
                       <UserCheck size={16} />
@@ -565,7 +596,11 @@ export function AdminDashboard() {
               <input type="number" value={editCrystals} onChange={e => setEditCrystals(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
             </div>
             
-            <div className="mb-6">
+            <div className="mb-3">
+              <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Passcoins</label>
+              <input type="number" value={editPasscoins} onChange={e => setEditPasscoins(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-yellow-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+            </div>
+            <div className="mb-4">
               <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Сила клика</label>
               <input type="number" value={editPower} onChange={e => setEditPower(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
             </div>
@@ -575,7 +610,8 @@ export function AdminDashboard() {
               <button onClick={() => {
                 const c = parseInt(editCrystals) || 0;
                 const p = parseInt(editPower) || 1;
-                editUserSave(editSaveUser.id, c, p);
+                const pass = parseInt(editPasscoins) || 0;
+                editUserSave(editSaveUser.id, c, p, pass);
                 setEditSaveUser(null);
               }} className="flex-1 py-3 rounded-xl bg-cyan-600/20 text-cyan-500 hover:bg-cyan-600/30 border border-cyan-500/30 transition-colors font-semibold">Сохранить</button>
             </div>
@@ -621,12 +657,23 @@ export function AdminDashboard() {
               <input type="number" value={editOminicoins} onChange={e => setEditOminicoins(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
             </div>
             
-            <div className="mb-6">
+            <div className="mb-3">
+              <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Подписка</label>
+              <select value={editSub} onChange={e => setEditSub(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors appearance-none" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
+                <option value="null">Нет подписки</option>
+                <option value="Cores Basic">Cores Basic</option>
+                <option value="Cores Gold">Cores Gold</option>
+                <option value="Cores +">Cores +</option>
+              </select>
+            </div>
+            <div className="mb-4">
               <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Уровень креатора</label>
               <select value={editCreatorLevel} onChange={e => setEditCreatorLevel(e.target.value as any)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors appearance-none" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
                 <option value="creator">Creator</option>
                 <option value="verified">Verified Creator</option>
                 <option value="super">Super Creator</option>
+                <option value="mythic">Mythic Creator</option>
+                <option value="legendary">Legendary Creator</option>
               </select>
             </div>
             
@@ -634,7 +681,7 @@ export function AdminDashboard() {
               <button onClick={() => setEditingCreator(null)} className="flex-1 py-3 rounded-xl transition-colors font-semibold" style={{...glass(isAdminDark, 0.1), color: isAdminDark ? '#fff' : '#000'}}>Отмена</button>
               <button onClick={() => {
                 const coins = parseInt(editOminicoins) || 0;
-                editCreatorProfile(editingCreator.id, { ominicoins: coins, creator_level: editCreatorLevel });
+                editCreatorProfile(editingCreator.id, { ominicoins: coins, creator_level: editCreatorLevel, active_subscription: editSub === "null" ? null : editSub });
                 setEditingCreator(null);
               }} className="flex-1 py-3 rounded-xl bg-purple-600/20 text-purple-500 hover:bg-purple-600/30 border border-purple-500/30 transition-colors font-semibold">Сохранить</button>
             </div>
