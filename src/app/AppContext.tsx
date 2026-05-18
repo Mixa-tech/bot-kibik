@@ -29,6 +29,38 @@ export interface MarketListing {
   price: number;
 }
 
+export interface CreatorProfile {
+  id: string;
+  user_id: string;
+  tg_username: string;
+  display_name: string;
+  avatar_url: string | null;
+  status: "pending" | "approved" | "rejected" | "untrusted";
+  creator_level: "creator" | "verified" | "super";
+  ominicoins: number;
+  active_subscription: string | null;
+  task_progress: Record<string, number> | null;
+  completed_tasks_count: number;
+}
+
+export const TASKS_CONFIG: Record<string, { name: string; reward: number; goal: number }> = {
+  CREATE_1_CODE: {
+    name: "Создать 1 промокод",
+    reward: 10,
+    goal: 1,
+  },
+  LIST_5_KIBIKS: {
+    name: "Выставить 5 кибиков на биржу",
+    reward: 20,
+    goal: 5,
+  },
+  SELL_1_KIBIK: {
+    name: "Продать 1 кибик на бирже",
+    reward: 100,
+    goal: 1,
+  },
+};
+
 export interface AppState {
   tgUser: TelegramUser | null;
   role: Role;
@@ -59,6 +91,14 @@ export interface AppState {
   createTrade: (receiverId: string, offer: InventoryItem, request: InventoryItem) => void;
   acceptTrade: (tradeId: string) => void;
   declineTrade: (tradeId: string) => void;
+  // --- Creator Portal ---
+  creatorProfile: CreatorProfile | null | undefined; // undefined = loading
+  applyForCreator: (profile: Omit<CreatorProfile, "id" | "status" | "creator_level" | "ominicoins">) => Promise<void>;
+  creatorProfiles: CreatorProfile[];
+  updateCreatorStatus: (profileId: string, status: CreatorProfile['status']) => void;
+  purchaseSubscription: (sub: { name: string, omin: number }) => Promise<void>;
+  editCreatorProfile: (profileId: string, data: { ominicoins: number, creator_level: CreatorProfile['creator_level'] }) => void;
+  editMyCreatorProfile: (data: { display_name: string, avatar_url: string | null }) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -71,6 +111,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [appError, setAppError] = useState<string | null>(null);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [marketListings, setMarketListings] = useState<MarketListing[]>([]);
+  const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null | undefined>(undefined);
+  const [creatorProfiles, setCreatorProfiles] = useState<CreatorProfile[]>([]);
+
 
   useEffect(() => {
     const initApp = async () => {
@@ -179,6 +222,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (marketError) console.error("Ошибка биржи:", marketError);
         else if (dbMarket) setMarketListings(dbMarket);
 
+        // 7. Загружаем профиль креатора (если есть)
+        const { data: creatorProfileData, error: creatorProfileError } = await supabase.from("creator_profiles").select("*").eq("user_id", currentUser.id).single();
+        if (creatorProfileError && creatorProfileError.code !== 'PGRST116') console.error("Ошибка профиля креатора:", creatorProfileError);
+        else setCreatorProfile(creatorProfileData);
+
+        // 8. Для админки грузим все заявки
+        const { data: allProfiles, error: allProfilesError } = await supabase.from("creator_profiles").select("*").order('created_at', { ascending: false });
+        if (allProfilesError) console.error("Ошибка загрузки заявок:", allProfilesError);
+        else setCreatorProfiles(allProfiles);
+
       } catch (err) {
         setAppError(`Ошибка БД: ${err.message || String(err)}`);
         console.error("Критическая ошибка Supabase:", err);
@@ -187,6 +240,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     initApp();
   }, []);
+
+  const handleTaskProgress = async (userId: string, taskKey: keyof typeof TASKS_CONFIG) => {
+    let profile: CreatorProfile | null = creatorProfiles.find(p => p.user_id === userId) || (creatorProfile?.user_id === userId ? creatorProfile : null);
+
+    if (!profile) {
+        const { data } = await supabase.from('creator_profiles').select('*').eq('user_id', userId).single();
+        profile = data;
+    }
+
+    if (!profile || profile.status !== 'approved') return;
+
+    const task = TASKS_CONFIG[taskKey];
+    if (!task) return;
+
+    const currentProgress = profile.task_progress?.[taskKey] || 0;
+    if (currentProgress >= task.goal) return; // Already completed
+
+    const newProgress = currentProgress + 1;
+    let newOminicoins = profile.ominicoins;
+    const taskProgressUpdate = { ...profile.task_progress, [taskKey]: newProgress };
+    let newCompletedTasks = profile.completed_tasks_count || 0;
+    let newCreatorLevel = profile.creator_level;
+
+    if (newProgress >= task.goal) {
+        newOminicoins += task.reward;
+        newCompletedTasks += 1;
+
+        if (newCompletedTasks >= 50 && newCreatorLevel !== 'super') {
+            newCreatorLevel = 'super';
+        } else if (newCompletedTasks >= 5 && newCreatorLevel === 'creator') {
+            newCreatorLevel = 'verified';
+        }
+    }
+
+    const updateFn = (p: CreatorProfile) => ({ ...p, ominicoins: newOminicoins, task_progress: taskProgressUpdate, completed_tasks_count: newCompletedTasks, creator_level: newCreatorLevel });
+
+    if (profile.id === creatorProfile?.id) {
+        setCreatorProfile(prev => prev ? updateFn(prev) : null);
+    }
+    setCreatorProfiles(prev => prev.map(p => p.id === profile.id ? updateFn(p) : p));
+
+    await supabase.from('creator_profiles').update({ ominicoins: newOminicoins, task_progress: taskProgressUpdate, completed_tasks_count: newCompletedTasks, creator_level: newCreatorLevel }).eq('id', profile.id);
+  };
 
   const addGlobalKibik = (code: string, kibik: Omit<InventoryItem, "id" | "addedAt">) => {
     setGlobalKibiks((prev) => ({ ...prev, [code.toUpperCase()]: kibik }));
@@ -202,6 +298,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAppError(`Ошибка создания кода: ${error.message}`);
       }
     }).catch(err => setAppError(`Сбой сети: ${err.message || String(err)}`));
+
+    // Handle task progress
+    if (creatorProfile && creatorProfile.status === 'approved') {
+      handleTaskProgress(creatorProfile.user_id, 'CREATE_1_CODE');
+    }
   };
 
   const removeGlobalKibik = (code: string) => {
@@ -450,27 +551,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     await supabase.from("users").update({ inventory: newInv, kibiks: newInv.length }).eq("id", userId);
     await supabase.from("market").insert({ seller_id: userId, item: kibik, price });
+
+    // Handle task progress
+    if (creatorProfile && creatorProfile.user_id === userId && creatorProfile.status === 'approved') {
+      handleTaskProgress(userId, 'LIST_5_KIBIKS');
+    }
   };
 
   const buyKibik = async (buyerId: string, listingId: string) => {
     const listing = marketListings.find(l => l.id === listingId);
     if (!listing) return;
     const buyer = users.find(u => u.id === buyerId);
-    if (!buyer || (buyer.crystals || 0) < listing.price) return; // Недостаточно кристаллов
+    if (!buyer || (buyer.crystals || 0) < listing.price) {
+      setAppError("Недостаточно кристаллов!");
+      setTimeout(() => setAppError(null), 2000);
+      return;
+    }
+
+    const { data: buyerCreatorProfile } = await supabase.from("creator_profiles").select("status").eq("user_id", buyerId).single();
+    const isCreator = buyerCreatorProfile?.status === 'approved';
 
     const seller = users.find(u => u.id === listing.seller_id);
     
-    const buyerCrystals = (buyer.crystals || 0) - listing.price;
+    const buyerCrystals = isCreator ? 0 : (buyer.crystals || 0) - listing.price;
+    const buyerClickPower = isCreator ? 1 : buyer.clickPower || 1;
     const buyerInv = [...(buyer.inventory || []), { ...listing.item, addedAt: new Date() }];
     
     setUsers(prev => prev.map(u => {
-      if (u.id === buyerId) return { ...u, crystals: buyerCrystals, inventory: buyerInv, kibiks: buyerInv.length };
+      if (u.id === buyerId) return { ...u, crystals: buyerCrystals, clickPower: buyerClickPower, inventory: buyerInv, kibiks: buyerInv.length };
       if (seller && u.id === seller.id) return { ...u, crystals: (u.crystals || 0) + listing.price };
       return u;
     }));
     
-    await supabase.from("users").update({ crystals: buyerCrystals, inventory: buyerInv, kibiks: buyerInv.length }).eq("id", buyerId);
-    if (seller) await supabase.from("users").update({ crystals: (seller.crystals || 0) + listing.price }).eq("id", seller.id);
+    await supabase.from("users").update({ crystals: buyerCrystals, clickPower: buyerClickPower, inventory: buyerInv, kibiks: buyerInv.length }).eq("id", buyerId);
+    if (seller) {
+      await supabase.from("users").update({ crystals: (seller.crystals || 0) + listing.price }).eq("id", seller.id);
+      handleTaskProgress(seller.id, 'SELL_1_KIBIK');
+    }
     await supabase.from("market").delete().eq("id", listingId);
   };
 
@@ -486,10 +603,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await supabase.from("market").delete().eq("id", listingId);
   };
 
+  const applyForCreator = async (profileData: Omit<CreatorProfile, "id" | "status" | "creator_level" | "ominicoins">) => {
+    const { data, error } = await supabase.from("creator_profiles").insert(profileData).select().single();
+    if (error) {
+      setAppError(error.message);
+      console.error(error);
+    } else if (data) {
+      setCreatorProfile(data);
+    }
+  };
+
+  const updateCreatorStatus = async (profileId: string, status: CreatorProfile['status']) => {
+    setCreatorProfiles(prev => prev.map(p => p.id === profileId ? { ...p, status } : p));
+    const { error } = await supabase.from("creator_profiles").update({ status }).eq("id", profileId);
+    if (error) {
+      setAppError(error.message);
+      console.error(error);
+    }
+  };
+
+  const purchaseSubscription = async (sub: { name: string, omin: number }) => {
+    if (!tgUser || !creatorProfile) return;
+    const userId = tgUser.id.toString();
+
+    if (creatorProfile.ominicoins < sub.omin) {
+        setAppError("Недостаточно Ominicoins!");
+        setTimeout(() => setAppError(null), 3000);
+        return;
+    }
+
+    const newOminicoins = creatorProfile.ominicoins - sub.omin;
+    const newSub = sub.name;
+
+    editUserSave(userId, 0, 1);
+    setCreatorProfile(prev => prev ? { ...prev, ominicoins: newOminicoins, active_subscription: newSub } : null);
+
+    const { error } = await supabase.from("creator_profiles").update({
+        ominicoins: newOminicoins,
+        active_subscription: newSub
+    }).eq("id", creatorProfile.id);
+
+    if (error) {
+        setAppError(`Ошибка покупки: ${error.message}`);
+        console.error(error);
+    }
+  };
+
+  const editCreatorProfile = (profileId: string, data: { ominicoins: number, creator_level: CreatorProfile['creator_level'] }) => {
+    setCreatorProfiles(prev => prev.map(p => p.id === profileId ? { ...p, ...data } : p));
+    const { error } = supabase.from("creator_profiles").update(data).eq("id", profileId);
+    if (error) {
+      setAppError(error.message);
+      console.error(error);
+    }
+  };
+
+  const editMyCreatorProfile = (data: { display_name: string, avatar_url: string | null }) => {
+    if (!creatorProfile) return;
+
+    setCreatorProfile(prev => prev ? { ...prev, ...data } : null);
+    setCreatorProfiles(prev => prev.map(p => p.id === creatorProfile.id ? { ...p, ...data } : p));
+
+    const { error } = supabase.from("creator_profiles").update(data).eq("id", creatorProfile.id);
+    if (error) {
+      setAppError(error.message);
+      console.error(error);
+    }
+  };
+
   // Эффект для прослушивания базы данных в реальном времени для всех пользователей
   useEffect(() => {
     const channel = supabase.channel('db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
+        const currentId = tgUser?.id.toString();
         setUsers((prev) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const u = payload.new as any;
@@ -498,6 +684,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               u.inventory = u.inventory.map((item: any) => ({ ...item, addedAt: new Date(item.addedAt) }));
             }
             const exists = prev.find((p) => p.id === u.id);
+            // Обновляем роль, если изменилась наша
+            if (u.id === currentId && u.role !== role) {
+              setRole(u.role);
+            }
             if (exists) return prev.map((p) => (p.id === u.id ? { ...p, ...u } : p));
             return [u, ...prev];
           }
@@ -537,13 +727,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return prev;
         });
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'creator_profiles' }, (payload) => {
+        const currentUserId = tgUser?.id.toString();
+        // Обновляем наш профиль
+        if ((payload.new as CreatorProfile)?.user_id === currentUserId) {
+          setCreatorProfile(payload.new as CreatorProfile);
+        }
+        // Обновляем список для админки
+        setCreatorProfiles(prev => {
+          if (payload.eventType === 'INSERT') return [payload.new as CreatorProfile, ...prev];
+          if (payload.eventType === 'UPDATE') return prev.map(p => p.id === payload.new.id ? payload.new as CreatorProfile : p);
+          if (payload.eventType === 'DELETE') return prev.filter(p => p.id !== payload.old.id);
+          return prev;
+        });
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [tgUser, role]);
 
   return (
-    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, toggleUserMaintenance, requestLoginCode, verifyLoginCode, clearLoginCode, editUserSave, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade }}>
+    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, toggleUserMaintenance, requestLoginCode, verifyLoginCode, clearLoginCode, editUserSave, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade, creatorProfile, applyForCreator, creatorProfiles, updateCreatorStatus, purchaseSubscription, editCreatorProfile, editMyCreatorProfile }}>
       {children}
     </AppContext.Provider>
   );
