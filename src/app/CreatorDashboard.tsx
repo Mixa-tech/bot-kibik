@@ -212,6 +212,8 @@ export function CreatorDashboard() {
                 <Lock size={32} className="text-neutral-500 mb-2" />
                 <p className="text-sm font-bold text-neutral-300">Лимит исчерпан</p>
                 <p className="text-xs text-neutral-500 mt-1">{activeSubName ? `Ваш лимит: ${monthlyLimit} в месяц.` : "Доступно 20 бесплатных кибиков."}</p>
+            </div>
+        )}
       </div>
 
       {/* Задания */}
