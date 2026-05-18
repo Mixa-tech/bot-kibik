@@ -20,13 +20,19 @@ interface SaveSlot {
 export function ClickerPage() {
   const { isDark } = useTheme();
   const c = tc(isDark);
-  const { tgUser, users, syncClicker, handleCheatBan } = useApp();
+  const { tgUser, users, syncClicker, handleCheatBan, creatorProfile } = useApp();
   
   const myId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find(u => u.id === myId);
   
   const dbCrystals = currentUser?.crystals || 0;
   const currentPower = currentUser?.clickPower || 1;
+
+  let multiplier = 1;
+  if (creatorProfile?.active_subscription === 'Cores Basic') multiplier = 1.5;
+  if (creatorProfile?.active_subscription === 'Cores Gold') multiplier = 2.5;
+  if (creatorProfile?.active_subscription === 'Cores +') multiplier = 5;
+  const effectivePower = Math.floor(currentPower * multiplier);
   
   const [uncommitted, setUncommitted] = useState(() => {
     try {
@@ -162,7 +168,7 @@ export function ClickerPage() {
 
     if (displayCrystals >= MAX_CRYSTALS) return;
 
-    const amount = Math.min(currentPower, MAX_CRYSTALS - displayCrystals);
+    const amount = Math.min(effectivePower, MAX_CRYSTALS - displayCrystals);
     setUncommitted(prev => prev + amount);
 
     // Анимация вылетающих циферок
@@ -254,6 +260,7 @@ export function ClickerPage() {
           style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(37,99,235,0.1))", border: "1px solid rgba(59,130,246,0.3)" }}
         >
           <span className="text-white font-bold flex items-center gap-2"><Zap size={16} className="text-blue-400" /> Прокачать силу клика (Текущая: {currentPower})</span>
+          {multiplier > 1 && <span className="text-xs font-bold text-green-400 mt-0.5">Активен буст от подписки: x{multiplier} (Клик: +{effectivePower})</span>}
           {currentPower < MAX_POWER && <span className="text-xs text-blue-300 mt-1">Цена: {getUpgradeCost(currentPower).toLocaleString()} 💎</span>}
           {currentPower >= MAX_POWER && <span className="text-xs text-yellow-400 mt-1">Максимальный уровень!</span>}
         </button>

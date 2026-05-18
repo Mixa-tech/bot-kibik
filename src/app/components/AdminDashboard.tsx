@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
-import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X, Download, ToggleLeft, Crown, UserCheck, ShieldX, Pencil, Sun, Moon, Check } from "lucide-react";
+import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X, Download, ToggleLeft, Crown, UserCheck, ShieldX, Pencil, Sun, Moon, Check, ShieldCheck } from "lucide-react";
 import { type CreatorProfile, useApp } from "../AppContext";
 import { glass } from "./ThemeContext";
 
 export function AdminDashboard() {
-  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, editUserSave, role, tgUser, transferKibik, requestLoginCode, verifyLoginCode, toggleUserMaintenance, creatorProfiles, updateCreatorStatus, editCreatorProfile } = useApp();
+  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, editUserSave, role, tgUser, transferKibik, requestLoginCode, verifyLoginCode, toggleUserMaintenance, toggleUserTrust, creatorProfiles, updateCreatorStatus, editCreatorProfile, pendingKibiks, approvePendingKibik, rejectPendingKibik } = useApp();
   const myId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find(u => u.id === myId);
 
@@ -35,7 +35,7 @@ export function AdminDashboard() {
   const ADMIN_TABS = [
     { key: 'main' as const, label: 'Главная', Icon: PlusCircle },
     { key: 'users' as const, label: 'Игроки', Icon: Users },
-    { key: 'apps' as const, label: 'Заявки', Icon: Crown },
+    { key: 'apps' as const, label: 'Модерация', Icon: ShieldCheck },
     { key: 'settings' as const, label: 'Настройки', Icon: ToggleLeft },
   ];
 
@@ -316,6 +316,7 @@ export function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => toggleUserMaintenance(u.id, !u.showMaintenance)} className={`border text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${u.showMaintenance ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20' : 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20 hover:bg-neutral-500/20'}`} title="Экран тех. работ">{u.showMaintenance ? "Снять" : "Блок"}</button>
+                    <button onClick={() => toggleUserTrust(u.id, !u.untrusted)} className={`border text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${u.untrusted ? 'bg-orange-500/10 text-orange-500 border-orange-500/20 hover:bg-orange-500/20' : 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20 hover:bg-neutral-500/20'}`} title="Статус доверия">{u.untrusted ? "Доверять" : "Недовер."}</button>
                     <button onClick={() => setTransferModalUser(u)} className="bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" title="Передать кибик">🎁</button>
                     <button onClick={() => {
                       setEditSaveUser(u);
@@ -386,6 +387,27 @@ export function AdminDashboard() {
                   <span className="text-sm font-bold text-red-500">Отклонен</span>
                 )}
               </div>
+            ))}
+
+            {/* Предложенные кибики */}
+            <h2 className={`text-lg font-bold flex items-center gap-2 mt-8 mb-2 ${isAdminDark ? 'text-green-400' : 'text-green-600'}`}><Package size={20}/> Кибики на модерации ({pendingKibiks.length})</h2>
+            {pendingKibiks.length === 0 && <p className="text-neutral-500 text-sm">Новых предложений нет</p>}
+            {pendingKibiks.map(k => (
+                <div key={k.id} className="p-4 rounded-2xl flex items-center justify-between gap-4" style={{...glass(isAdminDark, 0.1), border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`}}>
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl overflow-hidden shrink-0" style={glass(isAdminDark, 0.05)}>
+                            {k.emoji.startsWith("http") || k.emoji.startsWith("data") ? <img src={k.emoji} className="w-full h-full object-cover" /> : k.emoji}
+                        </div>
+                        <div>
+                            <div className="font-bold text-sm">{k.name} <span className="text-[10px] text-neutral-500 font-normal">от {k.creator_id}</span></div>
+                            <div className={`text-xs font-mono mt-1 bg-purple-500/10 px-2 py-0.5 rounded inline-block ${isAdminDark ? 'text-purple-400' : 'text-purple-600'}`}>{k.code}</div>
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <button onClick={() => approvePendingKibik(k)} className="p-2 bg-green-500/10 text-green-500 rounded-xl hover:bg-green-500/20" title="Одобрить"><Check size={18}/></button>
+                        <button onClick={() => rejectPendingKibik(k.id)} className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20" title="Отклонить"><X size={18}/></button>
+                    </div>
+                </div>
             ))}
           </div>
         )}

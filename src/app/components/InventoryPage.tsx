@@ -195,7 +195,11 @@ export function InventoryPage({ inventory }: InventoryPageProps) {
                 <X size={14} style={{ color: c.secondary }} />
               </button>
               <div className="text-center">
-                <div className="text-7xl mb-4">{selected.emoji}</div>
+                {/^(https?|data|blob):/.test(selected.emoji) ? (
+                  <img src={selected.emoji} alt={selected.name} className="w-24 h-24 mx-auto mb-4 object-cover rounded-2xl" />
+                ) : (
+                  <div className="text-7xl mb-4">{selected.emoji}</div>
+                )}
                 <h3 className="text-lg mb-1" style={{ color: c.primary }}>{selected.name}</h3>
                 <div
                   className="inline-block px-3 py-1 rounded-full text-xs mb-4"

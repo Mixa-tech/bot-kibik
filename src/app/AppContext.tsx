@@ -61,6 +61,16 @@ export const TASKS_CONFIG: Record<string, { name: string; reward: number; goal: 
   },
 };
 
+export interface PendingKibik {
+  id: string;
+  code: string;
+  name: string;
+  rarity: "common" | "rare" | "epic" | "legendary";
+  emoji: string;
+  creator_id: string;
+  created_at: string;
+}
+
 export interface AppState {
   tgUser: TelegramUser | null;
   role: Role;
@@ -74,6 +84,7 @@ export interface AppState {
   unbanUser: (userId: string) => void;
   handleCheatBan: (userId: string) => void;
   toggleUserMaintenance: (userId: string, show: boolean) => void;
+  toggleUserTrust: (userId: string, untrusted: boolean) => void;
   requestLoginCode: (username: string, requireAdmin?: boolean) => Promise<boolean>;
   verifyLoginCode: (username: string, code: string) => boolean;
   clearLoginCode: () => void;
@@ -99,6 +110,10 @@ export interface AppState {
   purchaseSubscription: (sub: { name: string, omin: number }) => Promise<void>;
   editCreatorProfile: (profileId: string, data: { ominicoins: number, creator_level: CreatorProfile['creator_level'] }) => void;
   editMyCreatorProfile: (data: { display_name: string, avatar_url: string | null }) => void;
+  pendingKibiks: PendingKibik[];
+  submitKibikForReview: (kibik: Omit<PendingKibik, "id" | "created_at">) => void;
+  approvePendingKibik: (kibik: PendingKibik) => void;
+  rejectPendingKibik: (id: string) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -113,6 +128,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [marketListings, setMarketListings] = useState<MarketListing[]>([]);
   const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null | undefined>(undefined);
   const [creatorProfiles, setCreatorProfiles] = useState<CreatorProfile[]>([]);
+  const [pendingKibiks, setPendingKibiks] = useState<PendingKibik[]>([]);
 
 
   useEffect(() => {
@@ -231,6 +247,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const { data: allProfiles, error: allProfilesError } = await supabase.from("creator_profiles").select("*").order('created_at', { ascending: false });
         if (allProfilesError) console.error("Ошибка загрузки заявок:", allProfilesError);
         else setCreatorProfiles(allProfiles);
+
+        // 9. Загружаем предложенные кибики
+        const { data: dbPendingKibiks } = await supabase.from("pending_kibiks").select("*");
+        if (dbPendingKibiks) setPendingKibiks(dbPendingKibiks);
 
       } catch (err) {
         setAppError(`Ошибка БД: ${err.message || String(err)}`);
@@ -359,6 +379,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleUserMaintenance = (userId: string, show: boolean) => {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, showMaintenance: show } : u));
     supabase.from("users").update({ showMaintenance: show }).eq("id", userId).then();
+  };
+
+  const toggleUserTrust = (userId: string, untrusted: boolean) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, untrusted } : u));
+    supabase.from("users").update({ untrusted }).eq("id", userId).then();
   };
 
   const requestLoginCode = async (username: string, requireAdmin = false) => {
@@ -673,6 +698,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const submitKibikForReview = async (kibik: Omit<PendingKibik, "id" | "created_at">) => {
+    const { data, error } = await supabase.from("pending_kibiks").insert(kibik).select().single();
+    if (data) setPendingKibiks(prev => [data, ...prev]);
+    if (error) setAppError(`Ошибка отправки на модерацию: ${error.message}`);
+  };
+
+  const approvePendingKibik = async (kibik: PendingKibik) => {
+    addGlobalKibik(kibik.code, { code: kibik.code, name: kibik.name, rarity: kibik.rarity, emoji: kibik.emoji });
+    rejectPendingKibik(kibik.id);
+  };
+
+  const rejectPendingKibik = async (id: string) => {
+    setPendingKibiks(prev => prev.filter(p => p.id !== id));
+    await supabase.from("pending_kibiks").delete().eq("id", id);
+  };
+
   // Эффект для прослушивания базы данных в реальном времени для всех пользователей
   useEffect(() => {
     const channel = supabase.channel('db-changes')
@@ -743,13 +784,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return prev;
         });
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pending_kibiks' }, (payload) => {
+        setPendingKibiks(prev => {
+          if (payload.eventType === 'INSERT') return [payload.new as PendingKibik, ...prev];
+          if (payload.eventType === 'DELETE') return prev.filter(p => p.id !== payload.old.id);
+          return prev;
+        });
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [tgUser, role]);
 
   return (
-    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, toggleUserMaintenance, requestLoginCode, verifyLoginCode, clearLoginCode, editUserSave, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade, creatorProfile, applyForCreator, creatorProfiles, updateCreatorStatus, purchaseSubscription, editCreatorProfile, editMyCreatorProfile }}>
+    <AppContext.Provider value={{ tgUser, role, users, globalKibiks, setUsers, addGlobalKibik, removeGlobalKibik, updateUserRole, banUser, unbanUser, handleCheatBan, toggleUserMaintenance, toggleUserTrust, requestLoginCode, verifyLoginCode, clearLoginCode, editUserSave, addKibikToUser, transferKibik, removeKibikFromUser, appError, trades, marketListings, sellKibik, buyKibik, cancelListing, syncClicker, createTrade, acceptTrade, declineTrade, creatorProfile, applyForCreator, creatorProfiles, updateCreatorStatus, purchaseSubscription, editCreatorProfile, editMyCreatorProfile, pendingKibiks, submitKibikForReview, approvePendingKibik, rejectPendingKibik }}>
       {children}
     </AppContext.Provider>
   );

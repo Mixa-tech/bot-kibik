@@ -125,7 +125,7 @@ function AppContent() {
   const showMaintenanceScreen = currentUser?.showMaintenance || (isGlobalMaintenance && !isMixazx);
 
   // Блокировка для недоверенных
-  if (creatorProfile?.status === 'untrusted') {
+  if (creatorProfile?.status === 'untrusted' || currentUser?.untrusted) {
     const isBlockedTab = activeTab === 'market' || activeTab === 'clicker';
     if (isBlockedTab) {
       return <div className="size-full fixed inset-0 z-[100] bg-neutral-900 text-white flex flex-col items-center justify-center p-4 text-center">

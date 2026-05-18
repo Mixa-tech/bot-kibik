@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Check, Crown, Gem, Pencil, Shield, Star, X } from "lucide-react";
+import { Check, Crown, Gem, Pencil, Shield, Star, X, PlusCircle, ImagePlus, Package } from "lucide-react";
 import { TASKS_CONFIG, type CreatorProfile, useApp } from "./AppContext";
 
 const levelConfig = {
@@ -9,13 +9,13 @@ const levelConfig = {
 };
 
 const subs = [
-    { name: "Cores Basic", price: 1000, omin: 100, color: "bg-neutral-700", desc: "Значок в профиле" },
-    { name: "Cores Gold", price: 5000, omin: 500, color: "bg-yellow-500", desc: "Золотой профиль" },
-    { name: "Cores +", price: 10000, omin: 1000, color: "bg-gradient-to-r from-purple-500 to-pink-500", desc: "Особые функции" },
+    { name: "Cores Basic", price: 1000, omin: 100, color: "bg-neutral-700", desc: "Значок + x1.5 клик" },
+    { name: "Cores Gold", price: 5000, omin: 500, color: "bg-yellow-500", desc: "Золото + x2.5 клик" },
+    { name: "Cores +", price: 10000, omin: 1000, color: "bg-gradient-to-r from-purple-500 to-pink-500", desc: "Анимация + x5 клик" },
 ];
 
 export function CreatorDashboard() {
-  const { creatorProfile, users, tgUser, purchaseSubscription, editMyCreatorProfile } = useApp();
+  const { creatorProfile, users, tgUser, purchaseSubscription, editMyCreatorProfile, submitKibikForReview } = useApp();
   const currentUser = users.find(u => u.id === tgUser?.id.toString());
 
   if (!creatorProfile) return null;
@@ -27,6 +27,12 @@ export function CreatorDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState(creatorProfile.display_name);
   const [editAvatar, setEditAvatar] = useState<string | null>(creatorProfile.avatar_url);
+
+  const [newCode, setNewCode] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newRarity, setNewRarity] = useState<"common" | "rare" | "epic" | "legendary">("common");
+  const [newEmoji, setNewEmoji] = useState("📦");
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
 
   const tasks = Object.entries(TASKS_CONFIG).map(([key, config]) => ({
     ...config, key, progress: creatorProfile.task_progress?.[key] || 0,
@@ -63,6 +69,42 @@ export function CreatorDashboard() {
     setIsEditing(false);
   };
 
+  const handleKibikUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_SIZE = 256;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+          } else {
+            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+          setNewEmoji(canvas.toDataURL("image/jpeg", 0.7));
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmitKibik = () => {
+    const code = newCode.trim().toUpperCase();
+    const name = newName.trim();
+    if (!code || !name) { setSubmitStatus("error"); setTimeout(() => setSubmitStatus("idle"), 2500); return; }
+    submitKibikForReview({ code, name, rarity: newRarity, emoji: newEmoji, creator_id: creatorProfile.user_id });
+    setSubmitStatus("success"); setNewCode(""); setNewName(""); setNewEmoji("📦"); setTimeout(() => setSubmitStatus("idle"), 3000);
+  };
+
   return (
     <div className="min-h-screen text-white p-4 relative">
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2071&auto=format&fit=crop)' }} />
@@ -96,6 +138,36 @@ export function CreatorDashboard() {
             </div>
             <div className="text-xs text-neutral-500">Ominicoins</div>
         </div>
+      </div>
+
+      {/* Создание Кибика */}
+      <div className="p-4 rounded-2xl bg-black/30 backdrop-blur-lg border border-white/10">
+        <h2 className="font-bold mb-3 flex items-center gap-2 text-green-400"><PlusCircle size={18}/> Создать Кибик</h2>
+        <div className="flex flex-col gap-3">
+            <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="Код (например: MYKIBIK)" className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-green-400 text-sm" />
+            <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Название кибика" className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-green-400 text-sm" />
+            
+            <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
+                    <input type="text" value={newEmoji} onChange={(e) => setNewEmoji(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 pr-10 outline-none focus:border-green-400 text-sm" />
+                    <button onClick={() => fileInputRef.current?.click()} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-400 hover:text-white bg-white/10"><ImagePlus size={16} /></button>
+                    <input type="file" ref={fileInputRef} onChange={handleKibikUpload} accept="image/*" className="hidden" />
+                </div>
+                <select value={newRarity} onChange={(e) => setNewRarity(e.target.value as any)} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-green-400 text-sm appearance-none text-white">
+                    <option value="common" className="bg-neutral-900">Обычный</option>
+                    <option value="rare" className="bg-neutral-900">Редкий</option>
+                    <option value="epic" className="bg-neutral-900">Эпический</option>
+                    <option value="legendary" className="bg-neutral-900">Легендарный</option>
+                </select>
+            </div>
+            
+            <button onClick={handleSubmitKibik} className="w-full bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 rounded-xl py-3 font-bold flex items-center justify-center gap-2 mt-1 transition-colors">
+                <Package size={16} /> ОТПРАВИТЬ НА ПРОВЕРКУ
+            </button>
+            {submitStatus === "success" && <p className="text-green-400 text-center text-xs">Кибик отправлен на модерацию!</p>}
+            {submitStatus === "error" && <p className="text-red-400 text-center text-xs">Заполните код и название!</p>}
+        </div>
+        <p className="text-[10px] text-neutral-400 mt-3 text-center">Ваш кибик появится в игре после проверки администратором.</p>
       </div>
 
       {/* Задания */}
