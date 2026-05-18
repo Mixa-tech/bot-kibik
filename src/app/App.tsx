@@ -1,24 +1,26 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Home, Package, User, Zap, ShieldAlert, Store, X, RefreshCw } from "lucide-react";
+import { Home, Package, User, Zap, ShieldAlert, Store, X, RefreshCw, ShoppingCart } from "lucide-react";
 import { ThemeContext } from "./components/ThemeContext";
 import { HomePage } from "./components/HomePage";
 import { InventoryPage } from "./components/InventoryPage";
 import { ProfilePage } from "./components/ProfilePage";
 import { ClickerPage } from "./components/ClickerPage";
 import { MarketPage } from "./components/MarketPage";
+import { ShopPage } from "./components/ShopPage";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { CreatorPortal } from "./CreatorPortal";
 import type { InventoryItem } from "./components/HomePage";
 import { AppProvider, useApp } from "./AppContext";
 
-type Tab = "home" | "inventory" | "market" | "clicker" | "profile";
+type Tab = "home" | "inventory" | "market" | "clicker" | "shop" | "profile";
 
 const TABS = [
   { key: "home" as Tab, label: "Главная", Icon: Home },
   { key: "inventory" as Tab, label: "Инвентарь", Icon: Package },
   { key: "market" as Tab, label: "Биржа", Icon: Store },
   { key: "clicker" as Tab, label: "Кликер", Icon: Zap },
+  { key: "shop" as Tab, label: "Магазин", Icon: ShoppingCart },
   { key: "profile" as Tab, label: "Профиль", Icon: User },
 ];
 
@@ -252,6 +254,7 @@ function AppContent() {
                   {activeTab === "inventory" && <InventoryPage inventory={inventory} />}
                   {activeTab === "market"    && <MarketPage />}
                   {activeTab === "clicker"   && <ClickerPage />}
+                  {activeTab === "shop"      && <ShopPage />}
                   {activeTab === "profile"   && <ProfilePage inventory={inventory} myName={myName} />}
                 </>
               )}
@@ -282,7 +285,7 @@ function AppContent() {
               const activePillBorder = isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.12)";
 
               return (
-                <div key={key} className="relative flex flex-col items-center" style={{ minWidth: 72 }}>
+                <div key={key} className="relative flex flex-col items-center flex-1" style={{ minWidth: 56 }}>
                   {isDisabled && (
                     <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-red-500/90 backdrop-blur text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
                       Недоступно
@@ -294,7 +297,7 @@ function AppContent() {
                       if (isDisabled) return;
                       setActiveTab(key);
                     }}
-                    className={`flex flex-col items-center gap-1 px-5 py-1.5 rounded-xl w-full transition-all ${isDisabled ? 'opacity-30 grayscale cursor-not-allowed' : ''}`}
+                    className={`flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl w-full transition-all ${isDisabled ? 'opacity-30 grayscale cursor-not-allowed' : ''}`}
                   >
                     {active && (
                       <motion.div

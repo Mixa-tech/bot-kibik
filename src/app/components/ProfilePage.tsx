@@ -68,7 +68,7 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
       if (profile?.creator_level === "mythic") return <Zap size={14} className="text-purple-400 shrink-0" title="Mythic Creator" />;
       if (profile?.creator_level === "super") return <Crown size={14} className="text-yellow-400 shrink-0" title="Super Creator" />;
       if (profile?.creator_level === "verified") return <Check size={14} className="text-blue-400 shrink-0" title="Verified Creator" />;
-      return <Star size={14} className="text-neutral-400 shrink-0" title="Creator" />;
+      return <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-blue-500 to-purple-500 shrink-0 leading-none" style={{ fontSize: '15px' }} title="Creator">C</span>;
     }
     return null;
   };
@@ -145,20 +145,6 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
             </div>
           </div>
         </div>
-
-      {/* Обменник */}
-      <div className="p-4 rounded-2xl flex flex-col gap-2" style={glass(isDark, 0.05)}>
-        <div className="flex justify-between items-center text-sm mb-1">
-            <span className="font-bold flex items-center gap-2" style={{ color: c.primary }}><Wallet size={16} className="text-yellow-500"/> Обменник</span>
-            <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/20">Курс: 100k 💎 = 10 PC</span>
-        </div>
-        <button 
-            onClick={convertPasscoins}
-            className="w-full py-3 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 border border-yellow-500/30 rounded-xl text-sm font-bold transition-colors mt-2"
-        >
-            Купить 10 Passcoins
-        </button>
-      </div>
 
         {/* Stats */}
         <div className="grid grid-cols-4 gap-2 mt-4">

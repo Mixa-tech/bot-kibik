@@ -11,14 +11,8 @@ const levelConfig = {
   legendary: { label: "Legendary Creator", color: "text-orange-500", icon: <Gem size={14} /> },
 };
 
-const subs = [
-    { name: "Cores Basic", passcoin: 10, omin: 100, color: "bg-neutral-700", desc: "Значок + x1.5 клик" },
-    { name: "Cores Gold", passcoin: 50, omin: 500, color: "bg-yellow-500", desc: "Золото + x2.5 клик" },
-    { name: "Cores +", passcoin: 100, omin: 1000, color: "bg-gradient-to-r from-purple-500 to-pink-500", desc: "Анимация + x5 клик" },
-];
-
 export function CreatorDashboard() {
-  const { creatorProfile, users, tgUser, purchaseSubscription, editMyCreatorProfile, submitKibikForReview, claimDailyBonus } = useApp();
+  const { creatorProfile, users, tgUser, editMyCreatorProfile, submitKibikForReview, claimDailyBonus } = useApp();
   const currentUser = users.find(u => u.id === tgUser?.id.toString());
 
   if (!creatorProfile) return null;
@@ -28,7 +22,6 @@ export function CreatorDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [subAnimation, setSubAnimation] = useState<string | null>(null);
   const [editDisplayName, setEditDisplayName] = useState(creatorProfile.display_name);
   const [editAvatar, setEditAvatar] = useState<string | null>(creatorProfile.avatar_url);
 
@@ -114,14 +107,6 @@ export function CreatorDashboard() {
     if (!code || !name) { setSubmitStatus("error"); setTimeout(() => setSubmitStatus("idle"), 2500); return; }
     submitKibikForReview({ code, name, rarity: newRarity, emoji: newEmoji, creator_id: creatorProfile.user_id });
     setSubmitStatus("success"); setNewCode(""); setNewName(""); setNewEmoji("📦"); setTimeout(() => setSubmitStatus("idle"), 3000);
-  };
-
-  const handleBuy = async (sub: any, method: 'omin' | 'passcoin') => {
-    const ok = await purchaseSubscription(sub, method);
-    if (ok) {
-      setSubAnimation(sub.name);
-      setTimeout(() => setSubAnimation(null), 4000);
-    }
   };
 
   return (
@@ -230,80 +215,6 @@ export function CreatorDashboard() {
                 )
             })}
         </div>
-      </div>
-
-      {/* Анимация при покупке подписки */}
-      <AnimatePresence>
-        {subAnimation && (
-          <motion.div
-            className="fixed inset-0 z-[200] flex flex-col items-center justify-center backdrop-blur-2xl"
-            style={{ background: subAnimation === 'Cores Gold' ? 'radial-gradient(circle, rgba(234,179,8,0.2) 0%, rgba(0,0,0,0.9) 100%)' : subAnimation === 'Cores +' ? 'radial-gradient(circle, rgba(168,85,247,0.2) 0%, rgba(0,0,0,0.9) 100%)' : 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.9) 100%)' }}
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              initial={{ scale: 0.5, opacity: 0, y: 50 }} 
-              animate={{ scale: 1, opacity: 1, y: 0 }} 
-              transition={{ type: "spring", damping: 12, stiffness: 100 }}
-              className="flex flex-col items-center text-center"
-            >
-               <div className={`w-32 h-32 rounded-full mb-6 flex items-center justify-center shadow-[0_0_80px_rgba(255,255,255,0.2)] ${subAnimation === 'Cores Gold' ? 'bg-yellow-500 shadow-yellow-500/50' : subAnimation === 'Cores +' ? 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-purple-500/50' : 'bg-neutral-600'}`}>
-                  <Crown size={60} className="text-white drop-shadow-md" />
-               </div>
-               <h1 className="text-4xl font-black text-white tracking-widest drop-shadow-lg mb-2">ПОЗДРАВЛЯЕМ!</h1>
-               <p className="text-xl text-neutral-300">Активирована подписка</p>
-               <div className={`text-3xl font-black mt-2 bg-clip-text text-transparent ${subAnimation === 'Cores Gold' ? 'bg-gradient-to-r from-yellow-300 to-yellow-600' : subAnimation === 'Cores +' ? 'bg-gradient-to-r from-purple-400 to-pink-500' : 'bg-gradient-to-r from-neutral-300 to-neutral-500'}`}>
-                 {subAnimation}
-               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Подписки */}
-      <div className="p-4 rounded-2xl bg-black/30 backdrop-blur-lg border border-white/10">
-        <h2 className="font-bold mb-3">Подписки Cores</h2>
-        <div className="grid grid-cols-3 gap-3">
-            {subs.map(sub => {
-                const isActive = activeSubName === sub.name;
-                return (
-                <div key={sub.name} className={`p-3 rounded-xl bg-black/40 text-center flex flex-col border ${isActive ? 'border-purple-500' : 'border-transparent'}`}>
-                    <div className={`w-8 h-8 rounded-full mx-auto mb-2 ${sub.color}`} />
-                    <div className="text-xs font-bold">{sub.name}</div>
-                    <div className="text-[10px] text-neutral-400 mb-2">{sub.desc}</div>
-                    {isActive ? (
-                        <div className="mt-auto flex flex-col gap-1 w-full text-center py-1.5 rounded-lg bg-green-500/20 text-green-400 text-[10px] font-bold">Активна</div>
-                    ) : (
-                        <div className="mt-auto flex flex-col gap-1">
-                            <button 
-                                onClick={() => handleBuy(sub, 'omin')} 
-                                disabled={sub.omin > creatorProfile.ominicoins} 
-                                className="w-full text-center py-1.5 rounded-lg bg-purple-600/50 text-purple-300 text-[10px] font-bold hover:bg-purple-600/70 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {sub.omin} ©
-                            </button>
-                            <button 
-                                onClick={() => handleBuy(sub, 'passcoin')} 
-                                disabled={sub.passcoin > (currentUser?.passcoins || 0)} 
-                                className="w-full text-center py-1.5 rounded-lg bg-yellow-600/50 text-yellow-400 text-[10px] font-bold hover:bg-yellow-600/70 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {sub.passcoin} PC
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )})}
-        </div>
-      </div>
-
-      {/* Сброс при покупке на бирже */}
-       <div className="p-4 rounded-2xl bg-yellow-900/30 backdrop-blur-lg border border-yellow-400/30">
-        <h2 className="font-bold mb-2 text-yellow-400">Предупреждение</h2>
-        <p className="text-xs text-neutral-400">
-            При покупке подписки или предмета на бирже все ваши сохранения в кликере (кристаллы и сила клика) будут **сброшены**. 
-            Это обязательное условие для поддержания баланса экономики.
-        </p>
       </div>
 
       {/* Edit Profile Modal */}
