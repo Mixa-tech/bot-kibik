@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Check, Crown, Gem, Pencil, Shield, Star, X } from "lucide-react";
-import { TASKS_CONFIG, type CreatorProfile, useApp } from "../../AppContext";
+import { TASKS_CONFIG, type CreatorProfile, useApp } from "./AppContext";
 
 const levelConfig = {
   creator: { label: "Creator", color: "text-neutral-400", icon: <Star size={14} /> },

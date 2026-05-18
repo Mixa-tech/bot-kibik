@@ -1,5 +1,5 @@
 import { Check, ShieldX, UserCheck, X } from "lucide-react";
-import { useApp } from "../../AppContext";
+import { useApp } from "./AppContext";
 
 export function CreatorAdminPage() {
   const { creatorProfiles, updateCreatorStatus } = useApp();

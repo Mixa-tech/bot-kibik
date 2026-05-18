@@ -8,6 +8,7 @@ import { ProfilePage } from "./components/ProfilePage";
 import { ClickerPage } from "./components/ClickerPage";
 import { MarketPage } from "./components/MarketPage";
 import { AdminDashboard } from "./components/AdminDashboard";
+import { CreatorPortal } from "./CreatorPortal";
 import type { InventoryItem } from "./components/HomePage";
 import { AppProvider, useApp } from "./AppContext";
 
@@ -28,16 +29,20 @@ function AppContent() {
   const [loginUser, setLoginUser] = useState("");
   const [loginPin, setLoginPin] = useState("");
   const [loginStep, setLoginStep] = useState<1 | 2>(1);
-  const { tgUser, users, addKibikToUser, appError, clearLoginCode, globalKibiks, requestLoginCode, verifyLoginCode } = useApp();
+  const { tgUser, users, addKibikToUser, appError, clearLoginCode, globalKibiks, requestLoginCode, verifyLoginCode, creatorProfile } = useApp();
 
   const currentUserId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find((u) => u.id === currentUserId);
   const inventory = currentUser?.inventory || [];
 
-  // СЕКРЕТНАЯ ССЫЛКА ДЛЯ ПЛАНШЕТА
+  // --- ГЛАВНЫЙ РОУТЕР ПРИЛОЖЕНИЯ ---
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get("admin") === "1") {
     return <AdminDashboard />;
+  }
+  // Если пользователь заходит по ссылке на портал креаторов
+  if (urlParams.get("portal") === "creator") {
+    return <CreatorPortal />;
   }
 
   const addItem = (item: InventoryItem) => {
@@ -118,6 +123,18 @@ function AppContent() {
   const isGlobalMaintenance = !!globalKibiks["SYSTEM_MAINTENANCE"];
   const isMixazx = tgUser?.username?.toLowerCase() === "mixazx" || currentUser?.username?.toLowerCase() === "@mixazx";
   const showMaintenanceScreen = currentUser?.showMaintenance || (isGlobalMaintenance && !isMixazx);
+
+  // Блокировка для недоверенных
+  if (creatorProfile?.status === 'untrusted') {
+    const isBlockedTab = activeTab === 'market' || activeTab === 'clicker';
+    if (isBlockedTab) {
+      return <div className="size-full fixed inset-0 z-[100] bg-neutral-900 text-white flex flex-col items-center justify-center p-4 text-center">
+        <ShieldAlert size={40} className="mx-auto text-neutral-500 mb-4" />
+        <h2 className="font-bold text-lg text-neutral-300">Доступ к разделу ограничен</h2>
+        <p className="text-xs text-neutral-400 mt-1">Ваш аккаунт имеет статус "недоверенный".</p>
+      </div>;
+    }
+  }
 
   if (showMaintenanceScreen) {
     const maintenanceText = isGlobalMaintenance 

@@ -1,4 +1,4 @@
-import { useApp } from "../../AppContext";
+import { useApp } from "./AppContext";
 import { CreatorApplyPage } from "./CreatorApplyPage";
 import { CreatorDashboard } from "./CreatorDashboard";
 import { PendingApprovalPage } from "./PendingApprovalPage";

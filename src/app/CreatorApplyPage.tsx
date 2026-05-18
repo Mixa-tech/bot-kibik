@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useApp } from "../../AppContext";
+import { useApp } from "./AppContext";
 import { Send } from "lucide-react";
 
 export function CreatorApplyPage() {
