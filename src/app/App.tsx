@@ -42,10 +42,6 @@ function AppContent() {
   if (urlParams.get("admin") === "1") {
     return <AdminDashboard />;
   }
-  // Если пользователь заходит по ссылке на портал креаторов
-  if (urlParams.get("portal") === "creator") {
-    return <CreatorPortal />;
-  }
 
   const addItem = (item: InventoryItem) => {
     addKibikToUser(currentUserId, item);
@@ -87,7 +83,7 @@ function AppContent() {
   }
 
   // Окно входа для браузера (чтобы не сидеть под Web Guest)
-  if (currentUser?.id === "12345" && !isGuestMode && !urlParams.get("admin")) {
+  if (currentUser?.username === "@guest" && !isGuestMode && !urlParams.get("admin")) {
     return (
       <ThemeContext.Provider value={{ isDark }}>
         <div className="size-full fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 text-center font-sans" style={{ background: bg, color: isDark ? "#fff" : "#000" }}>
@@ -119,6 +115,11 @@ function AppContent() {
         </div>
       </ThemeContext.Provider>
     );
+  }
+
+  // Если пользователь заходит по ссылке на портал креаторов
+  if (urlParams.get("portal") === "creator") {
+    return <CreatorPortal />;
   }
 
   // Проверка на тех. работы (ПОСЛЕ входа, чтобы админ мог авторизоваться с ПК)

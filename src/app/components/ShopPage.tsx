@@ -5,9 +5,9 @@ import { useTheme, glass, tc } from "./ThemeContext";
 import { useApp } from "../AppContext";
 
 const subs = [
-    { name: "Cores Basic", passcoin: 10, omin: 100, color: "bg-neutral-700", desc: "Базовый уровень", features: ["Значок у ника", "Множитель клика x1.5", "Награда: 20,000 💎"] },
-    { name: "Cores Gold", passcoin: 50, omin: 500, color: "bg-yellow-500", desc: "Продвинутый уровень", features: ["Золотой профиль", "Множитель клика x2.5", "Награда: 60,000 💎", "До 5 автокликеров 1 ур."] },
-    { name: "Cores +", passcoin: 100, omin: 1000, color: "bg-gradient-to-r from-purple-500 to-pink-500", desc: "Максимальный уровень", features: ["Анимация профиля", "Множитель клика x5", "Награда: 90,000 💎", "До 4 автокликеров 2 ур.", "Ежедневный бонус", "Свой кибик (1 раз в мес.)"] },
+    { name: "Cores Basic", passcoin: 10, omin: 100, color: "bg-neutral-700", desc: "Базовый уровень", features: ["Значок у ника", "Множитель клика x1.5", "Награда: 20,000 💎", "Лимит кибиков: +10 за ур/мес"] },
+    { name: "Cores Gold", passcoin: 50, omin: 500, color: "bg-yellow-500", desc: "Продвинутый уровень", features: ["Золотой профиль", "Множитель клика x2.5", "Награда: 60,000 💎", "До 5 автокликеров 1 ур.", "Лимит кибиков: +10 за ур/мес"] },
+    { name: "Cores +", passcoin: 100, omin: 1000, color: "bg-gradient-to-r from-purple-500 to-pink-500", desc: "Максимальный уровень", features: ["Анимация профиля", "Множитель клика x5", "Награда: 90,000 💎", "До 4 автокликеров 2 ур.", "Ежедневный бонус", "Лимит кибиков: +10 за ур/мес"] },
 ];
 
 export function ShopPage() {

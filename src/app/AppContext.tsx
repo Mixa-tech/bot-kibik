@@ -168,10 +168,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           inventory: [],
         };
       } else {
-        setTgUser({ id: 12345, first_name: "Web", username: "Guest" });
+        const localGuestId = parseInt(localStorage.getItem("kibik_guest_id") || "0") || Math.floor(Math.random() * 1000000000);
+        localStorage.setItem("kibik_guest_id", localGuestId.toString());
+        
+        setTgUser({ id: localGuestId as any, first_name: "Web", username: "Guest" });
         setRole("user");
         currentUser = {
-          id: "12345",
+          id: localGuestId.toString(),
           name: "Web Guest",
           username: "@guest",
           avatar: "LO",
@@ -825,8 +828,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const submitKibikForReview = async (kibik: Omit<PendingKibik, "id" | "created_at">) => {
     if (creatorProfile) {
-      await supabase.from("creator_profiles").update({ last_kibik_creation_date: new Date().toISOString() }).eq("id", creatorProfile.id);
-      setCreatorProfile(prev => prev ? { ...prev, last_kibik_creation_date: new Date().toISOString() } : null);
+      const currentCreated = creatorProfile.task_progress?.CREATED_KIBIKS || 0;
+      const lastDate = creatorProfile.last_kibik_creation_date ? new Date(creatorProfile.last_kibik_creation_date) : new Date(0);
+      const now = new Date();
+      const isSameMonth = lastDate.getMonth() === now.getMonth() && lastDate.getFullYear() === now.getFullYear();
+      const currentCreatedThisMonth = isSameMonth ? (creatorProfile.task_progress?.CREATED_THIS_MONTH || 0) : 0;
+
+      const newTaskProgress = { ...(creatorProfile.task_progress || {}), CREATED_KIBIKS: currentCreated + 1, CREATED_THIS_MONTH: currentCreatedThisMonth + 1 };
+      await supabase.from("creator_profiles").update({ last_kibik_creation_date: now.toISOString(), task_progress: newTaskProgress }).eq("id", creatorProfile.id);
+      setCreatorProfile(prev => prev ? { ...prev, last_kibik_creation_date: now.toISOString(), task_progress: newTaskProgress } : null);
     }
     
     const { data, error } = await supabase.from("pending_kibiks").insert(kibik).select().single();

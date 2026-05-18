@@ -27,11 +27,13 @@ export function ClickerPage() {
   
   const dbCrystals = currentUser?.crystals || 0;
   const currentPower = currentUser?.clickPower || 1;
+  const level = Math.max(1, Math.floor((currentUser?.inventory?.length || 0) / 3) + 1);
 
   let multiplier = 1;
   if (creatorProfile?.active_subscription === 'Cores Basic') multiplier = 1.5;
   if (creatorProfile?.active_subscription === 'Cores Gold') multiplier = 2.5;
   if (creatorProfile?.active_subscription === 'Cores +') multiplier = 5;
+  
   const effectivePower = Math.floor(currentPower * multiplier);
 
   const auto1 = currentUser?.auto_clickers?.level1 || 0;
@@ -62,7 +64,6 @@ export function ClickerPage() {
 
   const clickTimes = useRef<number[]>([]);
 
-  const level = Math.max(1, Math.floor((currentUser?.inventory?.length || 0) / 3) + 1);
   const MAX_CRYSTALS = 500000 + ((level - 1) * 100000);
   const MAX_POWER = 50;
 

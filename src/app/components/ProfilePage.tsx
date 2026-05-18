@@ -43,8 +43,14 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
   const activeSubName = creatorProfile?.active_subscription;
   const isCreator = creatorProfile?.status === 'approved';
 
-  const lastCreation = creatorProfile?.last_kibik_creation_date ? new Date(creatorProfile.last_kibik_creation_date).getTime() : 0;
-  const canCreate = activeSubName === 'Cores +' && (Date.now() - lastCreation > 30 * 24 * 60 * 60 * 1000);
+  const createdKibiksCount = creatorProfile?.task_progress?.CREATED_KIBIKS || 0;
+  const lastCreationDate = creatorProfile?.last_kibik_creation_date ? new Date(creatorProfile.last_kibik_creation_date) : new Date(0);
+  const now = new Date();
+  const isSameMonth = lastCreationDate.getMonth() === now.getMonth() && lastCreationDate.getFullYear() === now.getFullYear();
+  const createdThisMonth = isSameMonth ? (creatorProfile?.task_progress?.CREATED_THIS_MONTH || 0) : 0;
+  
+  const monthlyLimit = activeSubName ? (10 * myLevel) : 0;
+  const canCreate = (isCreator && createdKibiksCount < 20) || (activeSubName && createdThisMonth < monthlyLimit);
   
   const lastDaily = creatorProfile?.last_daily_bonus ? new Date(creatorProfile.last_daily_bonus).getTime() : 0;
   const canClaimDaily = activeSubName === 'Cores +' && (Date.now() - lastDaily > 24 * 60 * 60 * 1000);
@@ -217,8 +223,7 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
 
       {/* Cores+ Panel */}
       {activeSubName === 'Cores +' && (
-        <div className="mt-2 flex flex-col gap-3">
-          <div className="p-4 rounded-2xl" style={{ ...glass(isDark, 0.05), border: `1px solid ${isDark ? 'rgba(168,85,247,0.3)' : 'rgba(168,85,247,0.5)'}`, background: isDark ? 'rgba(168,85,247,0.1)' : 'rgba(168,85,247,0.05)' }}>
+          <div className="mt-2 p-4 rounded-2xl" style={{ ...glass(isDark, 0.05), border: `1px solid ${isDark ? 'rgba(168,85,247,0.3)' : 'rgba(168,85,247,0.5)'}`, background: isDark ? 'rgba(168,85,247,0.1)' : 'rgba(168,85,247,0.05)' }}>
             <h2 className="font-bold mb-3 flex items-center gap-2 text-purple-500"><Gift size={18}/> Ежедневный Бонус Cores+</h2>
             <div className="flex gap-2">
                 {isCreator && <button disabled={!canClaimDaily} onClick={() => claimDailyBonus('omin')} className="flex-1 py-3 bg-purple-500/20 text-purple-500 rounded-xl font-bold text-xs disabled:opacity-50 transition-colors">10 Ominicoins ©</button>}
@@ -226,9 +231,11 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
             </div>
             {!canClaimDaily && <p className="text-[10px] text-center mt-2" style={{ color: c.muted }}>Бонус уже получен сегодня.</p>}
           </div>
+      )}
 
-          <div className="p-4 rounded-2xl" style={glass(isDark, 0.05)}>
-            <h2 className="font-bold mb-3 flex items-center gap-2 text-green-500"><PlusCircle size={18}/> Создать Кибик (1 раз в месяц)</h2>
+      {isCreator && (
+          <div className="mt-2 p-4 rounded-2xl" style={glass(isDark, 0.05)}>
+            <h2 className="font-bold mb-3 flex items-center gap-2 text-green-500"><PlusCircle size={18}/> Создать Кибик {createdKibiksCount < 20 ? `(${createdKibiksCount}/20)` : (activeSubName ? `(${createdThisMonth}/${monthlyLimit} в мес.)` : "(Нужна подписка)")}</h2>
             {canCreate ? (
               <div className="flex flex-col gap-3">
                 <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="Код (например: MYKIBIK)" className="w-full rounded-xl px-4 py-3 outline-none text-sm" style={{ background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', color: c.primary, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
@@ -257,11 +264,10 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
               <div className="flex flex-col items-center justify-center p-4 text-center">
                   <Lock size={32} style={{ color: c.muted }} className="mb-2" />
                   <p className="text-sm font-bold" style={{ color: c.primary }}>Лимит исчерпан</p>
-                  <p className="text-xs mt-1" style={{ color: c.muted }}>Вы уже создавали кибик в этом месяце.</p>
+                  <p className="text-xs mt-1" style={{ color: c.muted }}>{activeSubName ? `Ваш лимит: ${monthlyLimit} в месяц.` : "Доступно 20 бесплатных кибиков."}</p>
               </div>
             )}
-          </div>
-        </div>
+          </div>)}
       )}
 
       {/* Trades Section */}

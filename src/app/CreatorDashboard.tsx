@@ -43,9 +43,14 @@ export function CreatorDashboard() {
   }));
 
   // Ограничения Cores+
-  const lastCreation = creatorProfile.last_kibik_creation_date ? new Date(creatorProfile.last_kibik_creation_date).getTime() : 0;
-  const canCreate = activeSubName === 'Cores +' && (Date.now() - lastCreation > 30 * 24 * 60 * 60 * 1000);
-  
+  const createdKibiksCount = creatorProfile.task_progress?.CREATED_KIBIKS || 0;
+  const lastCreationDate = creatorProfile.last_kibik_creation_date ? new Date(creatorProfile.last_kibik_creation_date) : new Date(0);
+  const now = new Date();
+  const isSameMonth = lastCreationDate.getMonth() === now.getMonth() && lastCreationDate.getFullYear() === now.getFullYear();
+  const createdThisMonth = isSameMonth ? (creatorProfile.task_progress?.CREATED_THIS_MONTH || 0) : 0;
+  const currentUserLevel = Math.max(1, Math.floor((currentUser?.inventory?.length || 0) / 3) + 1);
+  const monthlyLimit = activeSubName ? (10 * currentUserLevel) : 0;
+  const canCreate = createdKibiksCount < 20 || (activeSubName && createdThisMonth < monthlyLimit);
   const lastDaily = creatorProfile.last_daily_bonus ? new Date(creatorProfile.last_daily_bonus).getTime() : 0;
   const canClaimDaily = activeSubName === 'Cores +' && (Date.now() - lastDaily > 24 * 60 * 60 * 1000);
 
@@ -173,8 +178,7 @@ export function CreatorDashboard() {
 
       {/* Создание Кибика */}
       <div className="p-4 rounded-2xl bg-black/30 backdrop-blur-lg border border-white/10">
-        <h2 className="font-bold mb-3 flex items-center gap-2 text-green-400"><PlusCircle size={18}/> Создать Кибик</h2>
-        {canCreate ? (
+        <h2 className="font-bold mb-3 flex items-center gap-2 text-green-400"><PlusCircl
         <>
         <div className="flex flex-col gap-3">
             <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="Код (например: MYKIBIK)" className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-green-400 text-sm" />
@@ -205,10 +209,8 @@ export function CreatorDashboard() {
         ) : (
             <div className="flex flex-col items-center justify-center p-4 text-center">
                 <Lock size={32} className="text-neutral-500 mb-2" />
-                <p className="text-sm font-bold text-neutral-300">Доступно только для Cores+</p>
-                <p className="text-xs text-neutral-500 mt-1">Или вы уже создавали кибик в этом месяце.</p>
-            </div>
-        )}
+                <p className="text-sm font-bold text-neutral-300">Лимит исчерпан</p>
+                <p className="text-xs text-neutral-500 mt-1">{activeSubName ? `Ваш лимит: ${monthlyLimit} в месяц.` : "Доступно 20 бесплатных кибиков."}</p>
       </div>
 
       {/* Задания */}
