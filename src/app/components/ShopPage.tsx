@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Wallet, Crown, Lock } from "lucide-react";
+import { Wallet, Crown, Lock, Check } from "lucide-react";
 import { useTheme, glass, tc } from "./ThemeContext";
 import { useApp } from "../AppContext";
 
 const subs = [
-    { name: "Cores Basic", passcoin: 10, omin: 100, color: "bg-neutral-700", desc: "Значок + x1.5 клик" },
-    { name: "Cores Gold", passcoin: 50, omin: 500, color: "bg-yellow-500", desc: "Золото + x2.5 клик" },
-    { name: "Cores +", passcoin: 100, omin: 1000, color: "bg-gradient-to-r from-purple-500 to-pink-500", desc: "Анимация + x5 клик" },
+    { name: "Cores Basic", passcoin: 10, omin: 100, color: "bg-neutral-700", desc: "Базовый уровень", features: ["Значок у ника", "Множитель клика x1.5", "Награда: 20,000 💎"] },
+    { name: "Cores Gold", passcoin: 50, omin: 500, color: "bg-yellow-500", desc: "Продвинутый уровень", features: ["Золотой профиль", "Множитель клика x2.5", "Награда: 60,000 💎", "До 5 автокликеров 1 ур."] },
+    { name: "Cores +", passcoin: 100, omin: 1000, color: "bg-gradient-to-r from-purple-500 to-pink-500", desc: "Максимальный уровень", features: ["Анимация профиля", "Множитель клика x5", "Награда: 90,000 💎", "До 4 автокликеров 2 ур.", "Ежедневный бонус", "Свой кибик (1 раз в мес.)"] },
 ];
 
 export function ShopPage() {
@@ -63,13 +63,6 @@ export function ShopPage() {
             <h2 className="font-bold flex items-center gap-2" style={{ color: c.primary }}><Crown size={18} className="text-purple-500"/> Подписки Cores</h2>
         </div>
         
-        {!isCreator && (
-            <div className="p-3 mb-2 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-start gap-3">
-                <Lock size={16} className="text-orange-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-orange-400/90 leading-relaxed">Для покупки и использования подписок необходимо иметь одобренный статус <strong>Креатора</strong>.</p>
-            </div>
-        )}
-
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {subs.map(sub => {
                 const isActive = activeSubName === sub.name;
@@ -77,7 +70,16 @@ export function ShopPage() {
                 <div key={sub.name} className={`p-4 rounded-xl flex flex-col items-center border transition-colors ${isActive ? 'border-purple-500 bg-purple-500/10' : 'border-transparent bg-black/20'}`} style={!isActive ? glass(isDark, 0.03) : undefined}>
                     <div className={`w-10 h-10 rounded-full mb-3 ${sub.color}`} />
                     <div className="text-sm font-bold mb-1" style={{ color: c.primary }}>{sub.name}</div>
-                    <div className="text-xs text-center mb-4 min-h-[32px]" style={{ color: c.muted }}>{sub.desc}</div>
+                    <div className="text-xs text-center mb-3" style={{ color: c.muted }}>{sub.desc}</div>
+                    
+                    <div className="w-full flex flex-col gap-1.5 mb-5 text-left flex-1">
+                        {sub.features.map((feat, idx) => (
+                            <div key={idx} className="flex items-start gap-1.5 text-[10px]" style={{ color: c.primary }}>
+                                <Check size={12} className="text-green-500 shrink-0 mt-0.5" />
+                                <span className="leading-tight">{feat}</span>
+                            </div>
+                        ))}
+                    </div>
                     
                     {isActive ? (
                         <div className="mt-auto w-full text-center py-2 rounded-xl bg-green-500/20 text-green-400 text-xs font-bold">Активна</div>
@@ -85,14 +87,14 @@ export function ShopPage() {
                         <div className="mt-auto flex flex-col gap-2 w-full">
                             <button 
                                 onClick={() => handleBuy(sub, 'omin')} 
-                                disabled={!isCreator || sub.omin > (creatorProfile?.ominicoins || 0)} 
+                                disabled={sub.omin > (creatorProfile?.ominicoins || 0)} 
                                 className="w-full text-center py-2 rounded-xl bg-purple-600/50 text-purple-300 text-xs font-bold hover:bg-purple-600/70 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             >
                                 {sub.omin} ©
                             </button>
                             <button 
                                 onClick={() => handleBuy(sub, 'passcoin')} 
-                                disabled={!isCreator || sub.passcoin > (currentUser?.passcoins || 0)} 
+                                disabled={sub.passcoin > (currentUser?.passcoins || 0)} 
                                 className="w-full text-center py-2 rounded-xl bg-yellow-600/50 text-yellow-400 text-xs font-bold hover:bg-yellow-600/70 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             >
                                 {sub.passcoin} PC

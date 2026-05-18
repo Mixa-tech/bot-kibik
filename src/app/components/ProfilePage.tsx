@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, Users, Package2, Crown, Star, Zap, ChevronRight, X, ShieldAlert, Ban, ArrowRightLeft, Wallet, Check, Gem } from "lucide-react";
+import { Search, Users, Package2, Crown, Star, Zap, ChevronRight, X, ShieldAlert, Ban, ArrowRightLeft, Wallet, Check, Gem, Gift, PlusCircle, ImagePlus, Lock, Package } from "lucide-react";
 import { useTheme, glass, tc } from "./ThemeContext";
 import type { InventoryItem } from "./HomePage";
 import { useApp } from "../AppContext";
@@ -25,7 +25,7 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
   const [tradeOffer, setTradeOffer] = useState<InventoryItem | null>(null);
   const [tradeRequest, setTradeRequest] = useState<InventoryItem | null>(null);
 
-  const { role: myRole, users, updateUserRole, banUser, unbanUser, tgUser, trades, createTrade, acceptTrade, declineTrade, convertPasscoins, creatorProfiles } = useApp();
+  const { role: myRole, users, updateUserRole, banUser, unbanUser, tgUser, trades, createTrade, acceptTrade, declineTrade, convertPasscoins, creatorProfiles, creatorProfile, submitKibikForReview, claimDailyBonus } = useApp();
   const myId = tgUser ? tgUser.id.toString() : "12345";
   const pendingIncoming = trades.filter((t) => t.receiver_id === myId && t.status === "pending");
   const pendingOutgoing = trades.filter((t) => t.sender_id === myId && t.status === "pending");
@@ -38,6 +38,54 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
     common: inventory.filter((i) => i.rarity === "common").length,
   };
   const myLevel = Math.max(1, Math.floor(inventory.length / 3) + 1);
+
+  // Cores+ Features
+  const activeSubName = creatorProfile?.active_subscription;
+  const isCreator = creatorProfile?.status === 'approved';
+
+  const lastCreation = creatorProfile?.last_kibik_creation_date ? new Date(creatorProfile.last_kibik_creation_date).getTime() : 0;
+  const canCreate = activeSubName === 'Cores +' && (Date.now() - lastCreation > 30 * 24 * 60 * 60 * 1000);
+  
+  const lastDaily = creatorProfile?.last_daily_bonus ? new Date(creatorProfile.last_daily_bonus).getTime() : 0;
+  const canClaimDaily = activeSubName === 'Cores +' && (Date.now() - lastDaily > 24 * 60 * 60 * 1000);
+
+  const [newCode, setNewCode] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newRarity, setNewRarity] = useState<"common" | "rare" | "epic" | "legendary">("common");
+  const [newEmoji, setNewEmoji] = useState("📦");
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleKibikUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_SIZE = 256;
+          let width = img.width; let height = img.height;
+          if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
+          else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+          setNewEmoji(canvas.toDataURL("image/jpeg", 0.7));
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmitKibik = () => {
+    const code = newCode.trim().toUpperCase();
+    const name = newName.trim();
+    if (!code || !name) { setSubmitStatus("error"); setTimeout(() => setSubmitStatus("idle"), 2500); return; }
+    submitKibikForReview({ code, name, rarity: newRarity, emoji: newEmoji, creator_id: creatorProfile?.user_id || myId });
+    setSubmitStatus("success"); setNewCode(""); setNewName(""); setNewEmoji("📦"); setTimeout(() => setSubmitStatus("idle"), 3000);
+  };
 
   const handleBan = () => {
     if (!selectedUser) return;
@@ -166,6 +214,55 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
           ))}
         </div>
       </motion.div>
+
+      {/* Cores+ Panel */}
+      {activeSubName === 'Cores +' && (
+        <div className="mt-2 flex flex-col gap-3">
+          <div className="p-4 rounded-2xl" style={{ ...glass(isDark, 0.05), border: `1px solid ${isDark ? 'rgba(168,85,247,0.3)' : 'rgba(168,85,247,0.5)'}`, background: isDark ? 'rgba(168,85,247,0.1)' : 'rgba(168,85,247,0.05)' }}>
+            <h2 className="font-bold mb-3 flex items-center gap-2 text-purple-500"><Gift size={18}/> Ежедневный Бонус Cores+</h2>
+            <div className="flex gap-2">
+                {isCreator && <button disabled={!canClaimDaily} onClick={() => claimDailyBonus('omin')} className="flex-1 py-3 bg-purple-500/20 text-purple-500 rounded-xl font-bold text-xs disabled:opacity-50 transition-colors">10 Ominicoins ©</button>}
+                <button disabled={!canClaimDaily} onClick={() => claimDailyBonus('crystals')} className="flex-1 py-3 bg-blue-500/20 text-blue-500 rounded-xl font-bold text-xs disabled:opacity-50 transition-colors">5,000 Кристаллов 💎</button>
+            </div>
+            {!canClaimDaily && <p className="text-[10px] text-center mt-2" style={{ color: c.muted }}>Бонус уже получен сегодня.</p>}
+          </div>
+
+          <div className="p-4 rounded-2xl" style={glass(isDark, 0.05)}>
+            <h2 className="font-bold mb-3 flex items-center gap-2 text-green-500"><PlusCircle size={18}/> Создать Кибик (1 раз в месяц)</h2>
+            {canCreate ? (
+              <div className="flex flex-col gap-3">
+                <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="Код (например: MYKIBIK)" className="w-full rounded-xl px-4 py-3 outline-none text-sm" style={{ background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', color: c.primary, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+                <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Название кибика" className="w-full rounded-xl px-4 py-3 outline-none text-sm" style={{ background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', color: c.primary, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="relative">
+                        <input type="text" value={newEmoji} onChange={(e) => setNewEmoji(e.target.value)} className="w-full rounded-xl px-4 py-3 pr-10 outline-none text-sm" style={{ background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', color: c.primary, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+                        <button onClick={() => fileInputRef.current?.click()} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-500 hover:text-current" style={glass(isDark, 0.1)}><ImagePlus size={16} /></button>
+                        <input type="file" ref={fileInputRef} onChange={handleKibikUpload} accept="image/*" className="hidden" />
+                    </div>
+                    <select value={newRarity} onChange={(e) => setNewRarity(e.target.value as any)} className="w-full rounded-xl px-4 py-3 outline-none text-sm appearance-none" style={{ background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', color: c.primary, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
+                        <option value="common">Обычный</option>
+                        <option value="rare">Редкий</option>
+                        <option value="epic">Эпический</option>
+                        <option value="legendary">Легендарный</option>
+                    </select>
+                </div>
+                <button onClick={handleSubmitKibik} className="w-full bg-green-500/20 text-green-500 border border-green-500/30 hover:bg-green-500/30 rounded-xl py-3 font-bold flex items-center justify-center gap-2 mt-1 transition-colors">
+                    <Package size={16} /> ОТПРАВИТЬ НА ПРОВЕРКУ
+                </button>
+                {submitStatus === "success" && <p className="text-green-500 text-center text-xs">Кибик отправлен на модерацию!</p>}
+                {submitStatus === "error" && <p className="text-red-500 text-center text-xs">Заполните код и название!</p>}
+                <p className="text-[10px] mt-1 text-center" style={{ color: c.muted }}>Ваш кибик появится в игре после проверки администратором.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-4 text-center">
+                  <Lock size={32} style={{ color: c.muted }} className="mb-2" />
+                  <p className="text-sm font-bold" style={{ color: c.primary }}>Лимит исчерпан</p>
+                  <p className="text-xs mt-1" style={{ color: c.muted }}>Вы уже создавали кибик в этом месяце.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Trades Section */}
       {(pendingIncoming.length > 0 || pendingOutgoing.length > 0) && (

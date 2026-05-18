@@ -679,14 +679,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const purchaseSubscription = async (sub: { name: string, omin: number, passcoin: number }, method: 'omin' | 'passcoin') => {
-    if (!tgUser || !creatorProfile) return false;
+    if (!tgUser) return false;
     const userId = tgUser.id.toString();
     const currentUser = users.find(u => u.id === userId);
 
-    let newOminicoins = creatorProfile.ominicoins;
+    let newOminicoins = creatorProfile?.ominicoins || 0;
     let newPasscoins = currentUser?.passcoins || 0;
 
     if (method === 'omin') {
+      if (!creatorProfile) {
+        setAppError("Только креаторы могут платить Ominicoins!");
+        setTimeout(() => setAppError(null), 3000);
+        return false;
+      }
       if (newOminicoins < sub.omin) { setAppError("Недостаточно Ominicoins!"); setTimeout(() => setAppError(null), 3000); return false; }
       newOminicoins -= sub.omin;
     } else {
@@ -704,28 +709,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (sub.name === 'Cores +') newCrystals = 90000;
 
     editUserSave(userId, newCrystals, 1, newPasscoins);
-    setCreatorProfile(prev => prev ? { ...prev, ominicoins: newOminicoins, active_subscription: sub.name } : null);
 
-    const { error } = await supabase.from("creator_profiles").update({
-        ominicoins: newOminicoins,
-        active_subscription: sub.name
-    }).eq("id", creatorProfile.id);
-
-    if (error) {
-        setAppError(`Ошибка покупки: ${error.message}`);
-        console.error(error);
-        return false;
+    if (!creatorProfile) {
+      const newProfile: any = {
+          user_id: userId,
+          tg_username: currentUser?.username || "",
+          display_name: currentUser?.name || "",
+          status: 'pending',
+          creator_level: 'creator',
+          ominicoins: newOminicoins,
+          active_subscription: sub.name,
+          completed_tasks_count: 0
+      };
+      const { data, error } = await supabase.from("creator_profiles").insert(newProfile).select().single();
+      if (error) { setAppError(`Ошибка покупки: ${error.message}`); return false; }
+      if (data) setCreatorProfile(data);
+    } else {
+      setCreatorProfile(prev => prev ? { ...prev, ominicoins: newOminicoins, active_subscription: sub.name } : null);
+      const { error } = await supabase.from("creator_profiles").update({
+          ominicoins: newOminicoins,
+          active_subscription: sub.name
+      }).eq("id", creatorProfile.id);
+      if (error) { setAppError(`Ошибка покупки: ${error.message}`); return false; }
     }
     return true;
   };
 
   const grantSubscription = async (subName: string) => {
-    if (!tgUser || !creatorProfile || creatorProfile.status !== 'approved') {
-      setAppError("Для активации подписки нужно быть одобренным Креатором!");
-      setTimeout(() => setAppError(null), 3000);
-      return false;
-    }
+    if (!tgUser) return false;
     const userId = tgUser.id.toString();
+    const currentUser = users.find(u => u.id === userId);
     
     let newCrystals = 0;
     if (subName === 'Cores Basic') newCrystals = 20000;
