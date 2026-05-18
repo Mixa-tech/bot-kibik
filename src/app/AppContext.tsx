@@ -99,7 +99,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           role: isMixazx ? "admin" : "user",
           crystals: 0,
           clickPower: 1,
-          banCount: 0,
           inventory: [],
         };
       } else {
@@ -251,7 +250,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (count === 0) until.setDate(until.getDate() + 30); // Первый раз 30 дней
       else until.setFullYear(until.getFullYear() + 100); // Навсегда
       
-      supabase.from("users").update({ bannedUntil: until, banReason: "Использование автокликера", banCount: count + 1 }).eq("id", userId).then();
+      supabase.from("users").update({ bannedUntil: until, banReason: "Использование автокликера" }).eq("id", userId).then();
       return prev.map(u => u.id === userId ? { ...u, bannedUntil: until, banReason: "Автокликер", banCount: count + 1 } : u);
     });
   };
