@@ -250,7 +250,7 @@ export function AdminDashboard() {
               </div>
               
               {codeType === "kibik" ? (
-                <div>
+                <>
                   <div>
                     <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Название предмета</label>
                     <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Золотой куб" className="w-full rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
