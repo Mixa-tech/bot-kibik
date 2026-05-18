@@ -223,9 +223,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         else if (dbMarket) setMarketListings(dbMarket);
 
         // 7. Загружаем профиль креатора (если есть)
-        const { data: creatorProfileData, error: creatorProfileError } = await supabase.from("creator_profiles").select("*").eq("user_id", currentUser.id).limit(1).single();
-        if (creatorProfileError && creatorProfileError.code !== 'PGRST116') console.error("Ошибка профиля креатора:", creatorProfileError);
-        else setCreatorProfile(creatorProfileData);
+        const { data: creatorProfileDataArr, error: creatorProfileError } = await supabase.from("creator_profiles").select("*").eq("user_id", currentUser.id).limit(1);
+        if (creatorProfileError) console.error("Ошибка профиля креатора:", creatorProfileError);
+        else setCreatorProfile(creatorProfileDataArr?.[0] || null);
 
         // 8. Для админки грузим все заявки
         const { data: allProfiles, error: allProfilesError } = await supabase.from("creator_profiles").select("*").order('created_at', { ascending: false });
@@ -371,6 +371,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     console.log("🔑 СЕКРЕТНЫЙ КОД (для разработчика, если не работает база):", code);
     const { error } = await supabase.from("users").update({ loginCode: code }).eq("id", user.id);
     if (error) { alert("Ошибка при отправке кода. Добавьте колонку loginCode в БД!"); return false; }
+      
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, loginCode: code } : u));
     return true;
   };
 
