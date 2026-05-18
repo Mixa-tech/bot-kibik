@@ -175,6 +175,7 @@ export function CreatorDashboard() {
       <div className="p-4 rounded-2xl bg-black/30 backdrop-blur-lg border border-white/10">
         <h2 className="font-bold mb-3 flex items-center gap-2 text-green-400"><PlusCircle size={18}/> Создать Кибик</h2>
         {canCreate ? (
+        <>
         <div className="flex flex-col gap-3">
             <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="Код (например: MYKIBIK)" className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-green-400 text-sm" />
             <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Название кибика" className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-green-400 text-sm" />
@@ -200,6 +201,7 @@ export function CreatorDashboard() {
             {submitStatus === "error" && <p className="text-red-400 text-center text-xs">Заполните код и название!</p>}
         </div>
         <p className="text-[10px] text-neutral-400 mt-3 text-center">Ваш кибик появится в игре после проверки администратором.</p>
+        </>
         ) : (
             <div className="flex flex-col items-center justify-center p-4 text-center">
                 <Lock size={32} className="text-neutral-500 mb-2" />
