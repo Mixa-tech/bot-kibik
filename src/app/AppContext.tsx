@@ -89,7 +89,7 @@ export interface AppState {
   toggleUserMaintenance: (userId: string, show: boolean) => void;
   toggleUserTrust: (userId: string, untrusted: boolean) => void;
   requestLoginCode: (username: string, requireAdmin?: boolean) => Promise<boolean>;
-  verifyLoginCode: (username: string, code: string) => boolean;
+  verifyLoginCode: (username: string, code: string) => Promise<boolean>;
   clearLoginCode: () => void;
   editUserSave: (userId: string, crystals: number, clickPower: number) => void;
   addKibikToUser: (userId: string, item: InventoryItem) => void;
@@ -432,15 +432,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
-  const verifyLoginCode = (username: string, code: string) => {
+  const verifyLoginCode = async (username: string, code: string) => {
     const formatted = username.startsWith("@") ? username.toLowerCase() : `@${username.toLowerCase()}`;
     const user = users.find(u => u.username?.toLowerCase() === formatted);
     if (!user || user.loginCode !== code) { alert("Неверный код!"); return false; }
     
-    supabase.from("users").update({ loginCode: null }).eq("id", user.id).then();
+    await supabase.from("users").update({ loginCode: null }).eq("id", user.id);
     
     setTgUser({ id: parseInt(user.id) || 12345, first_name: user.name, username: user.username.replace("@", "") });
     setRole(user.role as Role);
+    
+    // Загружаем профиль Креатора для вошедшего пользователя
+    const { data } = await supabase.from("creator_profiles").select("*").eq("user_id", user.id).limit(1);
+    if (data && data.length > 0) {
+      setCreatorProfile(data[0]);
+    } else {
+      setCreatorProfile(null);
+    }
+
     return true;
   };
 

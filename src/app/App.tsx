@@ -108,7 +108,7 @@ function AppContent() {
             <div className="w-full max-w-sm">
               <p className="text-sm opacity-60 mb-6">Код отправлен в приложение (откройте игру на телефоне)</p>
               <input type="text" value={loginPin} onChange={e => setLoginPin(e.target.value)} placeholder="4-значный код" className="w-full border rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500 transition-colors text-center font-mono tracking-widest text-2xl" maxLength={4} style={{ background: isDark ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.5)", borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)", color: isDark ? "#fff" : "#000" }} />
-              <button onClick={() => verifyLoginCode(loginUser, loginPin)} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3.5 font-bold tracking-wider transition-colors mb-2">ВОЙТИ</button>
+              <button onClick={async () => await verifyLoginCode(loginUser, loginPin)} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3.5 font-bold tracking-wider transition-colors mb-2">ВОЙТИ</button>
               <button onClick={() => setLoginStep(1)} className="w-full bg-transparent opacity-50 hover:opacity-100 rounded-xl py-3 text-sm transition-opacity">Назад</button>
             </div>
           )}
