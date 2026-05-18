@@ -223,7 +223,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         else if (dbMarket) setMarketListings(dbMarket);
 
         // 7. Загружаем профиль креатора (если есть)
-        const { data: creatorProfileData, error: creatorProfileError } = await supabase.from("creator_profiles").select("*").eq("user_id", currentUser.id).single();
+        const { data: creatorProfileData, error: creatorProfileError } = await supabase.from("creator_profiles").select("*").eq("user_id", currentUser.id).limit(1).single();
         if (creatorProfileError && creatorProfileError.code !== 'PGRST116') console.error("Ошибка профиля креатора:", creatorProfileError);
         else setCreatorProfile(creatorProfileData);
 
