@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X, Download, ToggleLeft, Crown, UserCheck, ShieldX, Pencil } from "lucide-react";
+import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X, Download, ToggleLeft, Crown, UserCheck, ShieldX, Pencil, Sun, Moon } from "lucide-react";
 import { type CreatorProfile, useApp } from "../AppContext";
 import { glass } from "./ThemeContext";
 
@@ -26,6 +26,7 @@ export function AdminDashboard() {
   const [isAuth, setIsAuth] = useState(false);
   const [globalTransfer, setGlobalTransfer] = useState<{ sourceUserId: string, itemId: string, item: any } | null>(null);
   const [activeTab, setActiveTab] = useState<'main' | 'users' | 'apps' | 'settings'>('main');
+  const [isAdminDark, setIsAdminDark] = useState(true);
 
   const [editingCreator, setEditingCreator] = useState<CreatorProfile | null>(null);
   const [editOminicoins, setEditOminicoins] = useState("0");
@@ -175,27 +176,30 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen p-6 md:p-10 font-sans" style={{ background: '#f0f0f8', color: '#111' }}>
+    <div className="min-h-screen p-6 md:p-10 font-sans transition-colors" style={{ background: isAdminDark ? '#0a0a0a' : '#f0f0f8', color: isAdminDark ? '#fff' : '#111' }}>
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8 p-5 rounded-2xl" style={glass(false)}>
+        <div className="flex justify-between items-center mb-8 p-5 rounded-2xl" style={glass(isAdminDark)}>
           <div className="flex items-center gap-4 ">
             <div className="bg-blue-500/20 p-3 rounded-xl border border-blue-500/30">
               <ShieldAlert className="text-blue-500" size={28}/>
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-wider">KIBIK DASHBOARD</h1>
-              <p className="text-sm text-neutral-400">Панель управления администратора</p>
+              <p className="text-sm" style={{ color: isAdminDark ? '#888' : '#666' }}>Панель управления администратора</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => { window.location.search = ""; }} className="flex items-center gap-2 text-neutral-500 hover:text-black px-4 py-2 rounded-lg transition-colors" style={glass(false, 0.1)}>
+            <button onClick={() => setIsAdminDark(d => !d)} className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors" style={glass(isAdminDark, 0.1)}>
+              {isAdminDark ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-blue-500" />}
+            </button>
+            <button onClick={() => { window.location.search = ""; }} className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors" style={{...glass(isAdminDark, 0.1), color: isAdminDark ? '#aaa' : '#555'}}>
               <LogOut size={16} /> Выйти
             </button>
           </div>
         </div>
 
         {/* Admin Tabs Nav */}
-        <div className="flex items-center gap-2 mb-6 p-2 rounded-2xl relative" style={glass(false, 0.08)}>
+        <div className="flex items-center gap-2 mb-6 p-2 rounded-2xl relative" style={glass(isAdminDark, 0.08)}>
           {ADMIN_TABS.map(tab => {
             const isActive = activeTab === tab.key;
             if (role !== 'admin' && (tab.key === 'users' || tab.key === 'apps' || tab.key === 'settings')) {
@@ -205,9 +209,9 @@ export function AdminDashboard() {
               <button 
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all relative ${isActive ? 'text-blue-600' : 'text-neutral-500 hover:bg-black/5'}`}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all relative ${isActive ? (isAdminDark ? 'text-white' : 'text-blue-600') : (isAdminDark ? 'text-neutral-400 hover:bg-white/5' : 'text-neutral-500 hover:bg-black/5')}`}
               >
-                {isActive && <div className="absolute inset-0 bg-white/60 rounded-xl z-0" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />}
+                {isActive && <div className="absolute inset-0 rounded-xl z-0" style={{ background: isAdminDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.6)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />}
                 <div className="relative z-10 flex items-center gap-2">
                   <tab.Icon size={16} />
                   <span>{tab.label}</span>
@@ -218,34 +222,34 @@ export function AdminDashboard() {
         </div>
 
         {/* Main content */}
-        <div className="p-6 rounded-3xl" style={glass(false)}>
+        <div className="p-6 rounded-3xl" style={glass(isAdminDark)}>
 
         {activeTab === 'main' && (
           <div className={`grid grid-cols-1 ${role === 'admin' ? 'lg:grid-cols-2' : 'lg:grid-cols-2'} gap-6`}>
           {/* Колонна 1: Создание */}
-          <div className="bg-black/5 rounded-2xl p-6 flex flex-col gap-5">
-            <h2 className="text-lg font-bold flex items-center gap-2 text-green-600"><PlusCircle size={20}/> Создать Кибик</h2>
+          <div className="rounded-2xl p-6 flex flex-col gap-5" style={glass(isAdminDark, 0.05)}>
+            <h2 className={`text-lg font-bold flex items-center gap-2 ${isAdminDark ? 'text-green-400' : 'text-green-600'}`}><PlusCircle size={20}/> Создать Кибик</h2>
             <div className="flex flex-col gap-3">
               <div>
-                <label className="text-xs text-neutral-500 mb-1 block uppercase tracking-wider">Код кибика</label>
-                <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="Например: MEGA2026" className="w-full bg-white/50 border border-black/10 rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors" />
+                <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Код кибика</label>
+                <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="Например: MEGA2026" className="w-full rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
               </div>
               <div>
-                <label className="text-xs text-neutral-500 mb-1 block uppercase tracking-wider">Название</label>
-                <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Золотой куб" className="w-full bg-white/50 border border-black/10 rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors" />
+                <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Название</label>
+                <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Золотой куб" className="w-full rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-neutral-500 mb-1 block uppercase tracking-wider">Картинка</label>
+                  <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Картинка</label>
                   <div className="relative">
-                    <input type="text" value={newEmoji} onChange={(e) => setNewEmoji(e.target.value)} className="w-full bg-white/50 border border-black/10 rounded-xl px-4 py-3 pr-10 outline-none focus:border-green-500 transition-colors" />
-                    <button onClick={() => fileInputRef.current?.click()} className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-black bg-black/5 p-1.5 rounded-lg"><ImagePlus size={16} /></button>
+                    <input type="text" value={newEmoji} onChange={(e) => setNewEmoji(e.target.value)} className="w-full rounded-xl px-4 py-3 pr-10 outline-none focus:border-green-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+                    <button onClick={() => fileInputRef.current?.click()} className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${isAdminDark ? 'text-neutral-400 hover:text-white bg-white/5' : 'text-neutral-500 hover:text-black bg-black/5'}`}><ImagePlus size={16} /></button>
                     <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-neutral-500 mb-1 block uppercase tracking-wider">Редкость</label>
-                  <select value={newRarity} onChange={(e) => setNewRarity(e.target.value as any)} className="w-full bg-white/50 border border-black/10 rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors appearance-none">
+                  <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Редкость</label>
+                  <select value={newRarity} onChange={(e) => setNewRarity(e.target.value as any)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-green-500 transition-colors appearance-none" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
                     <option value="common">Обычный</option>
                     <option value="rare">Редкий</option>
                     <option value="epic">Эпический</option>
@@ -262,22 +266,22 @@ export function AdminDashboard() {
           </div>
 
           {/* Колонна 2: Активные коды */}
-          <div className="bg-black/5 rounded-2xl p-6 flex flex-col gap-4 lg:h-[600px]">
-            <h2 className="text-lg font-bold flex items-center gap-2 text-purple-600"><Package size={20}/> Доступные коды ({Object.keys(globalKibiks).filter(k => !k.startsWith("TAB_DISABLED_") && k !== "SYSTEM_MAINTENANCE").length})</h2>
+          <div className="rounded-2xl p-6 flex flex-col gap-4 lg:h-[600px]" style={glass(isAdminDark, 0.05)}>
+            <h2 className={`text-lg font-bold flex items-center gap-2 ${isAdminDark ? 'text-purple-400' : 'text-purple-600'}`}><Package size={20}/> Доступные коды ({Object.keys(globalKibiks).filter(k => !k.startsWith("TAB_DISABLED_") && k !== "SYSTEM_MAINTENANCE").length})</h2>
             <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-2 scrollbar-thin">
               {Object.values(globalKibiks).filter(k => !k.code.startsWith("TAB_DISABLED_") && k.code !== "SYSTEM_MAINTENANCE").length === 0 && <p className="text-neutral-500 text-center mt-10">Нет активных кодов</p>}
               {Object.values(globalKibiks).filter(k => !k.code.startsWith("TAB_DISABLED_") && k.code !== "SYSTEM_MAINTENANCE").reverse().map(k => (
-                <div key={k.code} className="bg-white/30 border border-black/10 rounded-xl p-3 flex justify-between items-center group hover:border-black/20 transition-colors">
+                <div key={k.code} className="rounded-xl p-3 flex justify-between items-center group transition-colors" style={{...glass(isAdminDark, 0.1), border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`}}>
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-black/5 rounded-lg flex items-center justify-center text-2xl overflow-hidden shrink-0">
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl overflow-hidden shrink-0" style={glass(isAdminDark, 0.05)}>
                       {k.emoji.startsWith("http") || k.emoji.startsWith("data") ? <img src={k.emoji} className="w-full h-full object-cover" /> : k.emoji}
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-black">{k.name}</div>
-                      <div className="text-xs font-mono text-purple-600 mt-1 bg-purple-500/10 px-2 py-0.5 rounded inline-block">{k.code}</div>
+                      <div className="font-bold text-sm">{k.name}</div>
+                      <div className={`text-xs font-mono mt-1 bg-purple-500/10 px-2 py-0.5 rounded inline-block ${isAdminDark ? 'text-purple-400' : 'text-purple-600'}`}>{k.code}</div>
                     </div>
                   </div>
-                  <button onClick={() => removeGlobalKibik(k.code)} className="text-neutral-500 hover:text-red-500 p-2 transition-colors" title="Удалить код">
+                  <button onClick={() => removeGlobalKibik(k.code)} className={`${isAdminDark ? 'text-neutral-500' : 'text-neutral-400'} hover:text-red-500 p-2 transition-colors`} title="Удалить код">
                     <Trash2 size={18} />
                   </button>
                 </div>
@@ -290,21 +294,21 @@ export function AdminDashboard() {
 
         {activeTab === 'users' && role === "admin" && (
           <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-bold flex items-center gap-2 text-blue-600 mb-2"><Users size={20}/> Игроки ({users.length})</h2>
+            <h2 className={`text-lg font-bold flex items-center gap-2 mb-2 ${isAdminDark ? 'text-blue-400' : 'text-blue-600'}`}><Users size={20}/> Игроки ({users.length})</h2>
             {users.map(u => {
               const isBanned = u.bannedUntil && new Date(u.bannedUntil) > new Date();
               return (
-                <div key={u.id} className="bg-white/30 border border-black/10 rounded-xl p-3 flex justify-between items-center hover:border-black/20 transition-colors">
+                <div key={u.id} className="rounded-xl p-3 flex justify-between items-center transition-colors" style={{...glass(isAdminDark, 0.1), border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`}}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-black/5 rounded-lg flex items-center justify-center font-bold text-neutral-500 shrink-0">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-neutral-500 shrink-0" style={glass(isAdminDark, 0.05)}>
                       {u.avatar}
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-black flex items-center gap-1">
+                      <div className="font-bold text-sm flex items-center gap-1">
                         {u.name}
                         {u.role === "admin" && <span className="text-yellow-500 text-[10px] ml-1">👑</span>}
                       </div>
-                      <div className="text-xs text-neutral-500 mt-0.5 flex gap-2">
+                      <div className={`text-xs mt-0.5 flex gap-2 ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
                         <span>Ур.{u.level}</span>
                         <span>💎{u.crystals || 0}</span>
                       </div>
@@ -333,14 +337,14 @@ export function AdminDashboard() {
 
         {activeTab === 'apps' && role === "admin" && (
           <div className="flex flex-col gap-3">
-            <h2 className="text-lg font-bold flex items-center gap-2 text-purple-600 mb-2"><Crown size={20}/> Заявки Креаторов</h2>
+            <h2 className={`text-lg font-bold flex items-center gap-2 mb-2 ${isAdminDark ? 'text-purple-400' : 'text-purple-600'}`}><Crown size={20}/> Заявки Креаторов</h2>
             {creatorProfiles.map(profile => (
-              <div key={profile.id} className="p-4 rounded-2xl bg-white/30 border border-black/10 flex items-center gap-4">
-                <img src={profile.avatar_url || ''} className="w-14 h-14 rounded-full object-cover bg-neutral-200" />
+              <div key={profile.id} className="p-4 rounded-2xl flex items-center gap-4" style={{...glass(isAdminDark, 0.1), border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`}}>
+                <img src={profile.avatar_url || ''} className="w-14 h-14 rounded-full object-cover" style={{ background: isAdminDark ? '#333' : '#eee' }} />
                 <div className="flex-1">
-                  <div className="font-bold text-black">{profile.display_name}</div>
-                  <div className="text-sm text-neutral-600">{profile.tg_username}</div>
-                  <div className="text-xs text-neutral-500 font-mono mt-1">ID: {profile.user_id}</div>
+                  <div className="font-bold">{profile.display_name}</div>
+                  <div className={`text-sm ${isAdminDark ? 'text-neutral-400' : 'text-neutral-600'}`}>{profile.tg_username}</div>
+                  <div className={`text-xs font-mono mt-1 ${isAdminDark ? 'text-neutral-500' : 'text-neutral-500'}`}>ID: {profile.user_id}</div>
                 </div>
                 
                 {profile.status === 'pending' && (
@@ -388,14 +392,14 @@ export function AdminDashboard() {
 
         {activeTab === 'settings' && role === "admin" && (
           <div>
-            <h2 className="text-lg font-bold flex items-center gap-2 text-orange-600 mb-4"><ToggleLeft size={20}/> Настройки</h2>
-            <div className="bg-black/5 rounded-2xl p-4 mb-4">
+            <h2 className={`text-lg font-bold flex items-center gap-2 mb-4 ${isAdminDark ? 'text-orange-400' : 'text-orange-600'}`}><ToggleLeft size={20}/> Настройки</h2>
+            <div className="rounded-2xl p-4 mb-4" style={glass(isAdminDark, 0.05)}>
               <h3 className="font-bold mb-3">Технические работы</h3>
               <button onClick={toggleMaintenance} className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors border ${isMaintenance ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20'}`}>
                 <ShieldAlert size={16} /> {isMaintenance ? "Выключить тех. работы" : "Включить тех. работы"}
               </button>
             </div>
-            <div className="bg-black/5 rounded-2xl p-4">
+            <div className="rounded-2xl p-4" style={glass(isAdminDark, 0.05)}>
               <h3 className="font-bold mb-3">Управление вкладками</h3>
               <div className="flex flex-wrap gap-3">
                 {TABS_INFO.map(tab => {
@@ -428,16 +432,16 @@ export function AdminDashboard() {
         const u = users.find(user => user.id === selectedUser.id) || selectedUser;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-white border border-black/10 text-black rounded-3xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+            <div className="rounded-3xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl" style={{ background: isAdminDark ? '#111' : '#fff', color: isAdminDark ? '#fff' : '#000', border: `1px solid ${isAdminDark ? '#333' : '#ddd'}`}}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-black/5 rounded-xl flex items-center justify-center text-xl">{u.avatar}</div>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl" style={glass(isAdminDark, 0.05)}>{u.avatar}</div>
                   <div>
                     <h2 className="text-xl font-bold">Инвентарь: {u.name}</h2>
-                    <p className="text-sm text-neutral-500">{u.inventory?.length || 0} кибиков</p>
+                    <p className={`text-sm ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>{u.inventory?.length || 0} кибиков</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedUser(null)} className="p-2 bg-black/10 hover:bg-black/20 rounded-full transition-colors"><X size={20} /></button>
+                <button onClick={() => setSelectedUser(null)} className="p-2 rounded-full transition-colors" style={glass(isAdminDark, 0.1)}><X size={20} /></button>
               </div>
               
               <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 scrollbar-thin">
@@ -473,13 +477,13 @@ export function AdminDashboard() {
       {/* Ban Modal */}
       {banModalUser && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-white border border-black/10 rounded-3xl p-6 w-full max-w-sm flex flex-col shadow-2xl text-black">
+          <div className="rounded-3xl p-6 w-full max-w-sm flex flex-col shadow-2xl" style={{ background: isAdminDark ? '#111' : '#fff', color: isAdminDark ? '#fff' : '#000', border: `1px solid ${isAdminDark ? '#333' : '#ddd'}`}}>
             <h2 className="text-xl font-bold mb-2">Забанить {banModalUser.name}</h2>
-            <p className="text-xs text-neutral-500 mb-4">Укажите срок и причину блокировки</p>
-            <input type="number" value={banDays} onChange={e => setBanDays(e.target.value)} placeholder="Количество дней" className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 mb-3 outline-none focus:border-red-500 transition-colors" />
-            <input type="text" value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="Причина бана" className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 mb-6 outline-none focus:border-red-500 transition-colors" />
+            <p className={`text-xs mb-4 ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Укажите срок и причину блокировки</p>
+            <input type="number" value={banDays} onChange={e => setBanDays(e.target.value)} placeholder="Количество дней" className="w-full rounded-xl px-4 py-3 mb-3 outline-none focus:border-red-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+            <input type="text" value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="Причина бана" className="w-full rounded-xl px-4 py-3 mb-6 outline-none focus:border-red-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
             <div className="flex gap-3">
-              <button onClick={() => setBanModalUser(null)} className="flex-1 py-3 rounded-xl bg-black/10 text-black hover:bg-black/20 transition-colors font-semibold">Отмена</button>
+              <button onClick={() => setBanModalUser(null)} className="flex-1 py-3 rounded-xl transition-colors font-semibold" style={{...glass(isAdminDark, 0.1), color: isAdminDark ? '#fff' : '#000'}}>Отмена</button>
               <button onClick={() => {
                 const days = parseInt(banDays) || 30;
                 const d = new Date(); d.setDate(d.getDate() + days);
@@ -496,13 +500,13 @@ export function AdminDashboard() {
         const myInv = currentUser?.inventory || [];
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-white border border-black/10 text-black rounded-3xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+            <div className="rounded-3xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl" style={{ background: isAdminDark ? '#111' : '#fff', color: isAdminDark ? '#fff' : '#000', border: `1px solid ${isAdminDark ? '#333' : '#ddd'}`}}>
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h2 className="text-xl font-bold">Передать кибик</h2>
-                  <p className="text-sm text-neutral-500">Выберите кибик из своего инвентаря для {transferModalUser.name}</p>
+                  <p className={`text-sm ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Выберите кибик из своего инвентаря для {transferModalUser.name}</p>
                 </div>
-                <button onClick={() => setTransferModalUser(null)} className="p-2 bg-[#222] hover:bg-[#333] rounded-full transition-colors"><X size={20} /></button>
+                <button onClick={() => setTransferModalUser(null)} className="p-2 rounded-full transition-colors" style={glass(isAdminDark, 0.1)}><X size={20} /></button>
               </div>
               
               <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 scrollbar-thin">
@@ -511,7 +515,7 @@ export function AdminDashboard() {
                   <div key={item.id} onClick={() => {
                     transferKibik(myId, transferModalUser.id, item.id);
                     setTransferModalUser(null);
-                  }} className="bg-black/5 border border-black/10 rounded-xl p-3 flex flex-col items-center gap-2 cursor-pointer group hover:border-purple-500 transition-colors">
+                  }} className="rounded-xl p-3 flex flex-col items-center gap-2 cursor-pointer group hover:border-purple-500 transition-colors" style={{...glass(isAdminDark, 0.05), border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`}}>
                     {/^(https?|data|blob):/.test(item.emoji) ? (
                       <img src={item.emoji} alt={item.name} className="w-10 h-10 object-cover rounded-lg mb-1" />
                     ) : (
@@ -530,22 +534,22 @@ export function AdminDashboard() {
       {/* Edit Save Modal */}
       {editSaveUser && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-white border border-black/10 rounded-3xl p-6 w-full max-w-sm flex flex-col shadow-2xl text-black">
+          <div className="rounded-3xl p-6 w-full max-w-sm flex flex-col shadow-2xl" style={{ background: isAdminDark ? '#111' : '#fff', color: isAdminDark ? '#fff' : '#000', border: `1px solid ${isAdminDark ? '#333' : '#ddd'}`}}>
             <h2 className="text-xl font-bold mb-2">Сохранение: {editSaveUser.name}</h2>
-            <p className="text-xs text-neutral-500 mb-4">Установите новые значения для аккаунта</p>
+            <p className={`text-xs mb-4 ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Установите новые значения для аккаунта</p>
             
             <div className="mb-3">
-              <label className="text-xs text-neutral-500 mb-1 block uppercase tracking-wider">Кристаллы</label>
-              <input type="number" value={editCrystals} onChange={e => setEditCrystals(e.target.value)} className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors" />
+              <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Кристаллы</label>
+              <input type="number" value={editCrystals} onChange={e => setEditCrystals(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
             </div>
             
             <div className="mb-6">
-              <label className="text-xs text-neutral-500 mb-1 block uppercase tracking-wider">Сила клика</label>
-              <input type="number" value={editPower} onChange={e => setEditPower(e.target.value)} className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors" />
+              <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Сила клика</label>
+              <input type="number" value={editPower} onChange={e => setEditPower(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-cyan-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
             </div>
             
             <div className="flex gap-3">
-              <button onClick={() => setEditSaveUser(null)} className="flex-1 py-3 rounded-xl bg-black/10 text-black hover:bg-black/20 transition-colors font-semibold">Отмена</button>
+              <button onClick={() => setEditSaveUser(null)} className="flex-1 py-3 rounded-xl transition-colors font-semibold" style={{...glass(isAdminDark, 0.1), color: isAdminDark ? '#fff' : '#000'}}>Отмена</button>
               <button onClick={() => {
                 const c = parseInt(editCrystals) || 0;
                 const p = parseInt(editPower) || 1;
@@ -560,21 +564,21 @@ export function AdminDashboard() {
       {/* Global Transfer Modal (Admin transferring any user's kibik) */}
       {globalTransfer && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-white border border-black/10 text-black rounded-3xl p-6 w-full max-w-md flex flex-col shadow-2xl max-h-[80vh]">
+          <div className="rounded-3xl p-6 w-full max-w-md flex flex-col shadow-2xl max-h-[80vh]" style={{ background: isAdminDark ? '#111' : '#fff', color: isAdminDark ? '#fff' : '#000', border: `1px solid ${isAdminDark ? '#333' : '#ddd'}`}}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold">Кому передать {globalTransfer.item.name}?</h2>
-              <button onClick={() => setGlobalTransfer(null)} className="p-2 bg-black/10 hover:bg-black/20 rounded-full"><X size={16} /></button>
+              <button onClick={() => setGlobalTransfer(null)} className="p-2 rounded-full" style={glass(isAdminDark, 0.1)}><X size={16} /></button>
             </div>
             <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-2 scrollbar-thin">
               {users.filter(u => u.id !== globalTransfer.sourceUserId).map(u => (
                  <button key={u.id} onClick={() => {
                    transferKibik(globalTransfer.sourceUserId, u.id, globalTransfer.itemId);
                    setGlobalTransfer(null);
-                 }} className="flex items-center gap-3 p-3 rounded-xl bg-black/5 hover:bg-black/10 border border-black/10 transition-colors text-left">
-                   <div className="w-8 h-8 rounded-lg bg-black/10 flex items-center justify-center">{u.avatar}</div>
+                 }} className="flex items-center gap-3 p-3 rounded-xl border transition-colors text-left" style={{...glass(isAdminDark, 0.05), border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`}}>
+                   <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={glass(isAdminDark, 0.1)}>{u.avatar}</div>
                    <div>
                      <div className="text-sm font-bold">{u.name}</div>
-                     <div className="text-xs text-neutral-500">{u.username}</div>
+                     <div className={`text-xs ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>{u.username}</div>
                    </div>
                  </button>
               ))}
@@ -586,18 +590,18 @@ export function AdminDashboard() {
       {/* Creator Profile Edit Modal */}
       {editingCreator && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-white border border-black/10 rounded-3xl p-6 w-full max-w-sm flex flex-col shadow-2xl text-black">
+          <div className="rounded-3xl p-6 w-full max-w-sm flex flex-col shadow-2xl" style={{ background: isAdminDark ? '#111' : '#fff', color: isAdminDark ? '#fff' : '#000', border: `1px solid ${isAdminDark ? '#333' : '#ddd'}`}}>
             <h2 className="text-xl font-bold mb-2">Профиль: {editingCreator.display_name}</h2>
-            <p className="text-xs text-neutral-500 mb-4">Редактирование Ominicoins и уровня</p>
+            <p className={`text-xs mb-4 ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Редактирование Ominicoins и уровня</p>
             
             <div className="mb-3">
-              <label className="text-xs text-neutral-500 mb-1 block uppercase tracking-wider">Ominicoins ©</label>
-              <input type="number" value={editOminicoins} onChange={e => setEditOminicoins(e.target.value)} className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors" />
+              <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Ominicoins ©</label>
+              <input type="number" value={editOminicoins} onChange={e => setEditOminicoins(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
             </div>
             
             <div className="mb-6">
-              <label className="text-xs text-neutral-500 mb-1 block uppercase tracking-wider">Уровень креатора</label>
-              <select value={editCreatorLevel} onChange={e => setEditCreatorLevel(e.target.value as any)} className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors appearance-none">
+              <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Уровень креатора</label>
+              <select value={editCreatorLevel} onChange={e => setEditCreatorLevel(e.target.value as any)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors appearance-none" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
                 <option value="creator">Creator</option>
                 <option value="verified">Verified Creator</option>
                 <option value="super">Super Creator</option>
@@ -605,7 +609,7 @@ export function AdminDashboard() {
             </div>
             
             <div className="flex gap-3">
-              <button onClick={() => setEditingCreator(null)} className="flex-1 py-3 rounded-xl bg-black/10 text-black hover:bg-black/20 transition-colors font-semibold">Отмена</button>
+              <button onClick={() => setEditingCreator(null)} className="flex-1 py-3 rounded-xl transition-colors font-semibold" style={{...glass(isAdminDark, 0.1), color: isAdminDark ? '#fff' : '#000'}}>Отмена</button>
               <button onClick={() => {
                 const coins = parseInt(editOminicoins) || 0;
                 editCreatorProfile(editingCreator.id, { ominicoins: coins, creator_level: editCreatorLevel });

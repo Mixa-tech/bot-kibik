@@ -64,9 +64,12 @@ export function CreatorDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1a1a2a] to-[#0a0a1a] text-white p-4 flex flex-col gap-4">
+    <div className="min-h-screen text-white p-4 relative">
+      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2071&auto=format&fit=crop)' }} />
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+      <div className="relative z-10 flex flex-col gap-4">
       {/* Профиль */}
-      <div className={`flex items-center gap-4 p-4 rounded-2xl bg-black/20 border transition-colors relative ${activeSubName === 'Cores Gold' ? 'border-yellow-400/50 bg-yellow-900/20' : 'border-white/10'}`}>
+      <div className={`flex items-center gap-4 p-4 rounded-2xl bg-black/30 backdrop-blur-lg border transition-colors relative ${activeSubName === 'Cores Gold' ? 'border-yellow-400/50 bg-yellow-900/20' : 'border-white/10'}`}>
         <div className="relative">
             <div className={`w-16 h-16 rounded-full object-cover bg-neutral-700 overflow-hidden ${activeSubName === 'Cores +' ? 'p-0.5' : ''}`}>
                 {activeSubName === 'Cores +' && (
@@ -96,7 +99,7 @@ export function CreatorDashboard() {
       </div>
 
       {/* Задания */}
-      <div className="p-4 rounded-2xl bg-black/20 border border-white/10">
+      <div className="p-4 rounded-2xl bg-black/30 backdrop-blur-lg border border-white/10">
         <h2 className="font-bold mb-3">Задания</h2>
         <div className="flex flex-col gap-3">
             {tasks.map(task => {
@@ -117,13 +120,13 @@ export function CreatorDashboard() {
       </div>
 
       {/* Подписки */}
-      <div className="p-4 rounded-2xl bg-black/20 border border-white/10">
+      <div className="p-4 rounded-2xl bg-black/30 backdrop-blur-lg border border-white/10">
         <h2 className="font-bold mb-3">Подписки Cores</h2>
         <div className="grid grid-cols-3 gap-3">
             {subs.map(sub => {
                 const isActive = activeSubName === sub.name;
                 return (
-                <div key={sub.name} className={`p-3 rounded-xl bg-black/30 text-center flex flex-col border ${isActive ? 'border-purple-500' : 'border-transparent'}`}>
+                <div key={sub.name} className={`p-3 rounded-xl bg-black/40 text-center flex flex-col border ${isActive ? 'border-purple-500' : 'border-transparent'}`}>
                     <div className={`w-8 h-8 rounded-full mx-auto mb-2 ${sub.color}`} />
                     <div className="text-xs font-bold">{sub.name}</div>
                     <div className="text-[10px] text-neutral-400 mb-2">{sub.desc}</div>
@@ -144,7 +147,7 @@ export function CreatorDashboard() {
       </div>
 
       {/* Сброс при покупке на бирже */}
-       <div className="p-4 rounded-2xl bg-black/20 border border-white/10">
+       <div className="p-4 rounded-2xl bg-yellow-900/30 backdrop-blur-lg border border-yellow-400/30">
         <h2 className="font-bold mb-2 text-yellow-400">Предупреждение</h2>
         <p className="text-xs text-neutral-400">
             При покупке подписки или предмета на бирже все ваши сохранения в кликере (кристаллы и сила клика) будут **сброшены**. 
@@ -154,7 +157,7 @@ export function CreatorDashboard() {
 
       {/* Edit Profile Modal */}
       {isEditing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
           <div className="bg-[#111] border border-[#222] rounded-3xl p-6 w-full max-w-sm flex flex-col shadow-2xl">
             <h2 className="text-xl font-bold mb-4">Редактировать профиль</h2>
             
@@ -184,6 +187,7 @@ export function CreatorDashboard() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
