@@ -178,7 +178,8 @@ export function CreatorDashboard() {
 
       {/* Создание Кибика */}
       <div className="p-4 rounded-2xl bg-black/30 backdrop-blur-lg border border-white/10">
-        <h2 className="font-bold mb-3 flex items-center gap-2 text-green-400"><PlusCircl
+        <h2 className="font-bold mb-3 flex items-center gap-2 text-green-400"><PlusCircle size={18}/> Создать Кибик {createdKibiksCount < 20 ? `(${createdKibiksCount}/20)` : (activeSubName ? `(${createdThisMonth}/${monthlyLimit} в мес.)` : "(Нужна подписка)")}</h2>
+        {canCreate ? (
         <>
         <div className="flex flex-col gap-3">
             <input type="text" value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="Код (например: MYKIBIK)" className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-green-400 text-sm" />
