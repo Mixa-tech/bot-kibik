@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Check, Crown, Gem, Pencil, Shield, Star, X, PlusCircle, ImagePlus, Package, Gift, Lock } from "lucide-react";
+import { Check, Crown, Gem, Pencil, Shield, Star, X, PlusCircle, ImagePlus, Package, Gift, Lock, Zap } from "lucide-react";
 import { TASKS_CONFIG, type CreatorProfile, useApp } from "./AppContext";
 
 const levelConfig = {

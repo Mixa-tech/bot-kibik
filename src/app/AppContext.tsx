@@ -831,6 +831,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await supabase.from("creator_profiles").update({ last_kibik_creation_date: new Date().toISOString() }).eq("id", creatorProfile.id);
       setCreatorProfile(prev => prev ? { ...prev, last_kibik_creation_date: new Date().toISOString() } : null);
     }
+    
+    const { data, error } = await supabase.from("pending_kibiks").insert(kibik).select().single();
+    if (data) setPendingKibiks(prev => [data, ...prev]);
+    if (error) setAppError(`Ошибка отправки на модерацию: ${error.message}`);
+  };
+
+  const approvePendingKibik = async (kibik: PendingKibik) => {
+    addGlobalKibik(kibik.code, { code: kibik.code, name: kibik.name, rarity: kibik.rarity, emoji: kibik.emoji });
+    rejectPendingKibik(kibik.id);
+  };
+
+  const rejectPendingKibik = async (id: string) => {
+    setPendingKibiks(prev => prev.filter(p => p.id !== id));
+    await supabase.from("pending_kibiks").delete().eq("id", id);
+  };
 
   // Эффект для прослушивания базы данных в реальном времени для всех пользователей
   useEffect(() => {
