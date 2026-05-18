@@ -267,7 +267,7 @@ export function ProfilePage({ inventory, myName = "Алекс" }: { inventory: I
                   <p className="text-xs mt-1" style={{ color: c.muted }}>{activeSubName ? `Ваш лимит: ${monthlyLimit} в месяц.` : "Доступно 20 бесплатных кибиков."}</p>
               </div>
             )}
-          </div>)}
+          </div>
       )}
 
       {/* Trades Section */}
