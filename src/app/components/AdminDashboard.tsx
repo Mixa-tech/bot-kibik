@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
-import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X, Download, ToggleLeft, Crown, UserCheck, ShieldX, Pencil, Sun, Moon, Check, ShieldCheck, RefreshCw } from "lucide-react";
+import { ShieldAlert, PlusCircle, Users, Package, Trash2, ImagePlus, LogOut, CheckCircle, X, Download, ToggleLeft, Crown, UserCheck, ShieldX, Pencil, Sun, Moon, Check, ShieldCheck, RefreshCw, CalendarDays } from "lucide-react";
 import { type CreatorProfile, useApp } from "../AppContext";
 import { glass } from "./ThemeContext";
 
 export function AdminDashboard() {
-  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, editUserSave, role, tgUser, transferKibik, requestLoginCode, verifyLoginCode, toggleUserMaintenance, toggleUserTrust, creatorProfiles, updateCreatorStatus, editCreatorProfile, pendingKibiks, approvePendingKibik, rejectPendingKibik } = useApp();
+  const { users, globalKibiks, addGlobalKibik, removeGlobalKibik, banUser, unbanUser, removeKibikFromUser, editUserSave, role, tgUser, transferKibik, requestLoginCode, verifyLoginCode, toggleUserMaintenance, toggleUserTrust, creatorProfiles, updateCreatorStatus, editCreatorProfile, pendingKibiks, approvePendingKibik, rejectPendingKibik, adminUpdateSubscription } = useApp();
   const myId = tgUser ? tgUser.id.toString() : "12345";
   const currentUser = users.find(u => u.id === myId);
 
@@ -26,18 +26,22 @@ export function AdminDashboard() {
   const [loginStep, setLoginStep] = useState<1 | 2>(1);
   const [isAuth, setIsAuth] = useState(false);
   const [globalTransfer, setGlobalTransfer] = useState<{ sourceUserId: string, itemId: string, item: any } | null>(null);
-  const [activeTab, setActiveTab] = useState<'main' | 'users' | 'apps' | 'settings'>('main');
+  const [activeTab, setActiveTab] = useState<'main' | 'users' | 'apps' | 'subs' | 'settings'>('main');
   const [isAdminDark, setIsAdminDark] = useState(true);
 
   const [editingCreator, setEditingCreator] = useState<CreatorProfile | null>(null);
   const [editOminicoins, setEditOminicoins] = useState("0");
   const [editCreatorLevel, setEditCreatorLevel] = useState<CreatorProfile['creator_level']>('creator');
-  const [editSub, setEditSub] = useState<string>("null");
+
+  const [subModalUser, setSubModalUser] = useState<any>(null);
+  const [subModalPlan, setSubModalPlan] = useState<string>("null");
+  const [subModalDays, setSubModalDays] = useState<string>("30");
 
   const ADMIN_TABS = [
     { key: 'main' as const, label: 'Главная', Icon: PlusCircle },
     { key: 'users' as const, label: 'Игроки', Icon: Users },
     { key: 'apps' as const, label: 'Модерация', Icon: ShieldCheck },
+    { key: 'subs' as const, label: 'Подписки', Icon: CalendarDays },
     { key: 'settings' as const, label: 'Настройки', Icon: ToggleLeft },
   ];
 
@@ -210,7 +214,7 @@ export function AdminDashboard() {
         <div className="flex items-center gap-2 mb-6 p-2 rounded-2xl relative" style={glass(isAdminDark, 0.08)}>
           {ADMIN_TABS.map(tab => {
             const isActive = activeTab === tab.key;
-            if (role !== 'admin' && (tab.key === 'users' || tab.key === 'apps' || tab.key === 'settings')) {
+            if (role !== 'admin' && (tab.key === 'users' || tab.key === 'apps' || tab.key === 'settings' || tab.key === 'subs')) {
               return null;
             }
             return (
@@ -391,7 +395,6 @@ export function AdminDashboard() {
                         setEditingCreator(profile);
                         setEditOminicoins(profile.ominicoins.toString());
                         setEditCreatorLevel(profile.creator_level);
-                        setEditSub(profile.active_subscription || "null");
                     }} className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20" title="Редактировать"><Pencil size={16} /></button>
                     <button onClick={() => updateCreatorStatus(profile.id, 'untrusted')} className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg hover:bg-yellow-500/20" title="Сделать недоверенным">
                       <ShieldX size={16} />
@@ -406,7 +409,6 @@ export function AdminDashboard() {
                         setEditingCreator(profile);
                         setEditOminicoins(profile.ominicoins.toString());
                         setEditCreatorLevel(profile.creator_level);
-                        setEditSub(profile.active_subscription || "null");
                     }} className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20" title="Редактировать"><Pencil size={16} /></button>
                     <button onClick={() => updateCreatorStatus(profile.id, 'approved')} className="p-2 bg-green-500/10 text-green-500 rounded-lg hover:bg-green-500/20" title="Вернуть доверие">
                       <UserCheck size={16} />
@@ -440,6 +442,38 @@ export function AdminDashboard() {
                     </div>
                 </div>
             ))}
+          </div>
+        )}
+
+        {activeTab === 'subs' && role === "admin" && (
+          <div className="flex flex-col gap-2">
+            <h2 className={`text-lg font-bold flex items-center gap-2 mb-2 ${isAdminDark ? 'text-purple-400' : 'text-purple-600'}`}><CalendarDays size={20}/> Управление подписками</h2>
+            {users.map(u => {
+              const profile = creatorProfiles.find(p => p.user_id === u.id);
+              const hasSub = !!profile?.active_subscription;
+              return (
+                <div key={u.id} className="rounded-xl p-3 flex justify-between items-center transition-colors" style={{...glass(isAdminDark, 0.1), border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`}}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-neutral-500 shrink-0" style={glass(isAdminDark, 0.05)}>{u.avatar}</div>
+                    <div>
+                      <div className="font-bold text-sm flex items-center gap-1">{u.name}</div>
+                      <div className={`text-xs mt-0.5 ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                        {hasSub ? (
+                          <span className="text-green-500 font-bold">{profile.active_subscription} (до {profile.subscription_expires_at ? new Date(profile.subscription_expires_at).toLocaleDateString("ru-RU") : 'бессрочно'})</span>
+                        ) : (
+                          <span>Нет подписки</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={() => {
+                    setSubModalUser(u);
+                    setSubModalPlan(profile?.active_subscription || "null");
+                    setSubModalDays("30");
+                  }} className="px-3 py-1.5 bg-purple-500/10 text-purple-500 rounded-lg text-xs font-semibold hover:bg-purple-500/20 transition-colors">Управление</button>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -657,15 +691,6 @@ export function AdminDashboard() {
               <input type="number" value={editOminicoins} onChange={e => setEditOminicoins(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
             </div>
             
-            <div className="mb-3">
-              <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Подписка</label>
-              <select value={editSub} onChange={e => setEditSub(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors appearance-none" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
-                <option value="null">Нет подписки</option>
-                <option value="Cores Basic">Cores Basic</option>
-                <option value="Cores Gold">Cores Gold</option>
-                <option value="Cores +">Cores +</option>
-              </select>
-            </div>
             <div className="mb-4">
               <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Уровень креатора</label>
               <select value={editCreatorLevel} onChange={e => setEditCreatorLevel(e.target.value as any)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors appearance-none" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
@@ -681,9 +706,40 @@ export function AdminDashboard() {
               <button onClick={() => setEditingCreator(null)} className="flex-1 py-3 rounded-xl transition-colors font-semibold" style={{...glass(isAdminDark, 0.1), color: isAdminDark ? '#fff' : '#000'}}>Отмена</button>
               <button onClick={() => {
                 const coins = parseInt(editOminicoins) || 0;
-                editCreatorProfile(editingCreator.id, { ominicoins: coins, creator_level: editCreatorLevel, active_subscription: editSub === "null" ? null : editSub });
+                editCreatorProfile(editingCreator.id, { ominicoins: coins, creator_level: editCreatorLevel, active_subscription: editingCreator.active_subscription });
                 setEditingCreator(null);
               }} className="flex-1 py-3 rounded-xl bg-purple-600/20 text-purple-500 hover:bg-purple-600/30 border border-purple-500/30 transition-colors font-semibold">Сохранить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Management Modal */}
+      {subModalUser && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="rounded-3xl p-6 w-full max-w-sm flex flex-col shadow-2xl" style={{ background: isAdminDark ? '#111' : '#fff', color: isAdminDark ? '#fff' : '#000', border: `1px solid ${isAdminDark ? '#333' : '#ddd'}`}}>
+            <h2 className="text-xl font-bold mb-2">Подписка: {subModalUser.name}</h2>
+            <p className={`text-xs mb-4 ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Измените уровень или продлите срок</p>
+            
+            <div className="mb-3">
+              <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Уровень подписки</label>
+              <select value={subModalPlan} onChange={e => setSubModalPlan(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors appearance-none" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
+                <option value="null">Нет подписки (Отключить)</option>
+                <option value="Cores Basic">Cores Basic</option>
+                <option value="Cores Gold">Cores Gold</option>
+                <option value="Cores +">Cores +</option>
+              </select>
+            </div>
+            {subModalPlan !== "null" && (
+              <div className="mb-6">
+                <label className={`text-xs mb-1 block uppercase tracking-wider ${isAdminDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Срок (дней)</label>
+                <input type="number" value={subModalDays} onChange={e => setSubModalDays(e.target.value)} className="w-full rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-colors" style={{ background: isAdminDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)', border: `1px solid ${isAdminDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+                <p className="text-[10px] mt-1 text-neutral-500">Приплюсуется к текущему сроку, если подписка та же.</p>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => setSubModalUser(null)} className="flex-1 py-3 rounded-xl transition-colors font-semibold" style={{...glass(isAdminDark, 0.1), color: isAdminDark ? '#fff' : '#000'}}>Отмена</button>
+              <button onClick={() => { const days = parseInt(subModalDays) || 30; adminUpdateSubscription(subModalUser.id, subModalPlan === "null" ? null : subModalPlan, subModalPlan === "null" ? null : days); setSubModalUser(null); }} className="flex-1 py-3 rounded-xl bg-purple-600/20 text-purple-500 hover:bg-purple-600/30 border border-purple-500/30 transition-colors font-semibold">Сохранить</button>
             </div>
           </div>
         </div>

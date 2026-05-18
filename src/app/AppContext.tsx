@@ -43,6 +43,7 @@ export interface CreatorProfile {
   completed_tasks_count: number;
   last_kibik_creation_date: string | null;
   last_daily_bonus: string | null;
+  subscription_expires_at: string | null;
 }
 
 export const TASKS_CONFIG: Record<string, { name: string; reward: number; goal: number }> = {
@@ -111,6 +112,7 @@ export interface AppState {
   updateCreatorStatus: (profileId: string, status: CreatorProfile['status']) => void;
   purchaseSubscription: (sub: { name: string, omin: number, passcoin: number }, method: 'omin' | 'passcoin') => Promise<boolean>;
   grantSubscription: (subName: string) => Promise<boolean>;
+  adminUpdateSubscription: (userId: string, subName: string | null, daysToAdd: number | null) => Promise<void>;
   editCreatorProfile: (profileId: string, data: { ominicoins: number, creator_level: CreatorProfile['creator_level'], active_subscription: string | null }) => void;
   editMyCreatorProfile: (data: { display_name: string, avatar_url: string | null }) => void;
   pendingKibiks: PendingKibik[];
@@ -251,14 +253,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         else if (dbMarket) setMarketListings(dbMarket);
 
         // 7. Загружаем профиль креатора (если есть)
+        let myProfile = null;
         const { data: creatorProfileDataArr, error: creatorProfileError } = await supabase.from("creator_profiles").select("*").eq("user_id", currentUser.id).limit(1);
         if (creatorProfileError) console.error("Ошибка профиля креатора:", creatorProfileError);
-        else setCreatorProfile(creatorProfileDataArr?.[0] || null);
+        else myProfile = creatorProfileDataArr?.[0] || null;
+
+        if (myProfile && myProfile.active_subscription && myProfile.subscription_expires_at && new Date(myProfile.subscription_expires_at) < new Date()) {
+            myProfile.active_subscription = null;
+            myProfile.subscription_expires_at = null;
+            supabase.from("creator_profiles").update({ active_subscription: null, subscription_expires_at: null }).eq("id", myProfile.id).then();
+        }
+        setCreatorProfile(myProfile);
 
         // 8. Для админки грузим все заявки
         const { data: allProfiles, error: allProfilesError } = await supabase.from("creator_profiles").select("*").order('created_at', { ascending: false });
         if (allProfilesError) console.error("Ошибка загрузки заявок:", allProfilesError);
-        else setCreatorProfiles(allProfiles);
+        else {
+          const now = new Date();
+          const validProfiles = allProfiles.map((p: any) => {
+            if (p.active_subscription && p.subscription_expires_at && new Date(p.subscription_expires_at) < now) {
+              return { ...p, active_subscription: null, subscription_expires_at: null };
+            }
+            return p;
+          });
+          setCreatorProfiles(validProfiles);
+        }
 
         // 9. Загружаем предложенные кибики
         const { data: dbPendingKibiks } = await supabase.from("pending_kibiks").select("*");
@@ -706,6 +725,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       newPasscoins -= sub.passcoin;
     }
 
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     let newCrystals = 0;
     if (sub.name === 'Cores Basic') newCrystals = 20000;
     if (sub.name === 'Cores Gold') newCrystals = 60000;
@@ -722,16 +742,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           creator_level: 'creator',
           ominicoins: newOminicoins,
           active_subscription: sub.name,
+          subscription_expires_at: expiresAt,
           completed_tasks_count: 0
       };
       const { data, error } = await supabase.from("creator_profiles").insert(newProfile).select().single();
       if (error) { setAppError(`Ошибка покупки: ${error.message}`); return false; }
       if (data) setCreatorProfile(data);
     } else {
-      setCreatorProfile(prev => prev ? { ...prev, ominicoins: newOminicoins, active_subscription: sub.name } : null);
+      setCreatorProfile(prev => prev ? { ...prev, ominicoins: newOminicoins, active_subscription: sub.name, subscription_expires_at: expiresAt } : null);
       const { error } = await supabase.from("creator_profiles").update({
           ominicoins: newOminicoins,
-          active_subscription: sub.name
+          active_subscription: sub.name,
+          subscription_expires_at: expiresAt
       }).eq("id", creatorProfile.id);
       if (error) { setAppError(`Ошибка покупки: ${error.message}`); return false; }
     }
@@ -743,6 +765,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const userId = tgUser.id.toString();
     const currentUser = users.find(u => u.id === userId);
     
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     let newCrystals = 0;
     if (subName === 'Cores Basic') newCrystals = 20000;
     if (subName === 'Cores Gold') newCrystals = 60000;
