@@ -236,10 +236,14 @@ export function CreatorDashboard() {
           <motion.div
             className="fixed inset-0 z-[200] flex flex-col items-center justify-center backdrop-blur-2xl"
             style={{ background: subAnimation === 'Cores Gold' ? 'radial-gradient(circle, rgba(234,179,8,0.2) 0%, rgba(0,0,0,0.9) 100%)' : subAnimation === 'Cores +' ? 'radial-gradient(circle, rgba(168,85,247,0.2) 0%, rgba(0,0,0,0.9) 100%)' : 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.9) 100%)' }}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
           >
             <motion.div
-              initial={{ scale: 0.5, opacity: 0, y: 50 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: "spring", damping: 12, stiffness: 100 }}
+              initial={{ scale: 0.5, opacity: 0, y: 50 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              transition={{ type: "spring", damping: 12, stiffness: 100 }}
               className="flex flex-col items-center text-center"
             >
                <div className={`w-32 h-32 rounded-full mb-6 flex items-center justify-center shadow-[0_0_80px_rgba(255,255,255,0.2)] ${subAnimation === 'Cores Gold' ? 'bg-yellow-500 shadow-yellow-500/50' : subAnimation === 'Cores +' ? 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-purple-500/50' : 'bg-neutral-600'}`}>
@@ -270,10 +274,18 @@ export function CreatorDashboard() {
                         <div className="mt-auto flex flex-col gap-1 w-full text-center py-1.5 rounded-lg bg-green-500/20 text-green-400 text-[10px] font-bold">Активна</div>
                     ) : (
                         <div className="mt-auto flex flex-col gap-1">
-                            <button onClick={() => handleBuy(sub, 'omin')} disabled={creatorProfile.ominicoins < sub.omin} className="w-full text-center py-1.5 rounded-lg bg-purple-600/50 text-purple-300 text-[10px] font-bold hover:bg-purple-600/70 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button 
+                                onClick={() => handleBuy(sub, 'omin')} 
+                                disabled={sub.omin > creatorProfile.ominicoins} 
+                                className="w-full text-center py-1.5 rounded-lg bg-purple-600/50 text-purple-300 text-[10px] font-bold hover:bg-purple-600/70 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
                                 {sub.omin} ©
                             </button>
-                            <button onClick={() => handleBuy(sub, 'passcoin')} disabled={(currentUser?.passcoins || 0) < sub.passcoin} className="w-full text-center py-1.5 rounded-lg bg-yellow-600/50 text-yellow-400 text-[10px] font-bold hover:bg-yellow-600/70 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button 
+                                onClick={() => handleBuy(sub, 'passcoin')} 
+                                disabled={sub.passcoin > (currentUser?.passcoins || 0)} 
+                                className="w-full text-center py-1.5 rounded-lg bg-yellow-600/50 text-yellow-400 text-[10px] font-bold hover:bg-yellow-600/70 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
                                 {sub.passcoin} PC
                             </button>
                         </div>
