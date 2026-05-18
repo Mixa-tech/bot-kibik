@@ -89,6 +89,7 @@ export function CreatorApplyPage() {
             <label className="text-xs text-neutral-300 mb-1 block text-left">Telegram юзернейм</label>
             <input type="text" value={tgUsername} onChange={e => setTgUsername(e.target.value)} placeholder="@username" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 outline-none focus:border-purple-400 transition-colors" />
           </div>
+        </div>
 
         <div className="w-full max-w-sm mt-4 bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col gap-4">
           <h2 className="text-sm font-bold text-neutral-300">Ваш первый кибик (для модерации)</h2>
